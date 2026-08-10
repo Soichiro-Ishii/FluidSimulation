@@ -1,0 +1,10 @@
+#pragma once
+enum class TEXTURE2DFILTER {
+	NEAREST,
+	LINEAR,
+};
+enum class TEXTURE2DWRAP {
+	REPEAT,
+	CLAMP_TO_EDGE,
+	MIRRORED_REPEAT
+};
