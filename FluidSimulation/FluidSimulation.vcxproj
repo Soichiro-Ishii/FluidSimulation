@@ -289,6 +289,7 @@
     <None Include="assets\shaders\renderGradTexFS.glsl" />
     <None Include="assets\shaders\renderTexFS.glsl" />
     <None Include="assets\shaders\screenVS.glsl" />
+    <None Include="assets\shaders\vortOmegaFS.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

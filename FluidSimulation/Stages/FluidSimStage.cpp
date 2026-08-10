@@ -106,6 +106,11 @@ bool FluidSimStage::onInit() {
 		spdlog::critical("faild to load apply input to color and density Shader");
 		return false;
 	}
+	m_vortOmegaShader.load("assets\\shaders\\screenVS.glsl", "assets\\shaders\\vortOmegaFS.glsl");
+	if (!m_vortOmegaShader.valid()) {
+		spdlog::critical("faild to load vort omega Shader");
+		return false;
+	}
 
 	TEXTURE2DSETTING firstColorDensSet;
 	firstColorDensSet.filter = TEXTURE2DFILTER::LINEAR;
@@ -124,6 +129,7 @@ bool FluidSimStage::onInit() {
 	TEXTURE2DDESC colDensDesc;
 	TEXTURE2DDESC divergenceDesc;
 	TEXTURE2DDESC pressureDesc;
+	TEXTURE2DDESC vortOmegaDesc;
 	velDesc.width = width();
 	velDesc.height = height();
 	velDesc.internalFormat = GL_RG16F;
@@ -138,6 +144,7 @@ bool FluidSimStage::onInit() {
 	divergenceDesc.format = GL_RED;
 	divergenceDesc.set.filter = TEXTURE2DFILTER::NEAREST;
 	pressureDesc = divergenceDesc;		//共通部分はコピー
+	vortOmegaDesc = divergenceDesc;		//共通部分はコピー
 	for (auto& rt : m_velRT)
 		rt.create(velDesc);
 	for (auto& rt : m_colDensRT)
@@ -145,6 +152,7 @@ bool FluidSimStage::onInit() {
 	m_divergenceRT.create(divergenceDesc);
 	for (auto& rt : m_pressureRT)
 		rt.create(pressureDesc);
+	m_vortOmegaRT.create(vortOmegaDesc);
 
 	SAMPLER_DESC smpDesc;
 	smpDesc.minFilter = TEXTURE2DFILTER::NEAREST;
@@ -170,6 +178,7 @@ bool FluidSimStage::onInit() {
 	m_MS.injectColor = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
 	m_MS.rClick = 0;
 	m_MS.lClick = 0;
+	m_MS.vortStrength = 30;
 	m_MSUB.create(&m_MS, sizeof(FluidSimInput), 1);
 
 	glDisable(GL_DEPTH_TEST);
@@ -187,8 +196,10 @@ void FluidSimStage::onUpdate(float delta) {
 	m_MS.rClick = static_cast<uint32_t>(isMousePress(GLFW_MOUSE_BUTTON_RIGHT));
 	m_MS.lClick = static_cast<uint32_t>(isMousePress(GLFW_MOUSE_BUTTON_LEFT));
 	if (ImGui::Begin("Fluid Simulator")) {
+		ImGui::Text("FPS:%.1f", 1 / delta);
 		ImGui::SliderFloat("interaction Force", &m_MS.interactionForce, 0.0f, 15000.0f);
 		ImGui::SliderFloat("interaction Radius", &m_MS.interactionRadius, 0.0f, 1.0f);
+		ImGui::SliderFloat("vorticity strength", &m_MS.vortStrength, 0.0f, 50.0f);
 		if (ImGui::Button("show gradient")) {
 			m_showGrad = !m_showGrad;
 		}
@@ -220,6 +231,14 @@ void FluidSimStage::onRender() {
 		m_screen.draw();
 		rt.unbind();
 	}
+	//渦度計算
+	m_texcelSMP.bind(0);
+	m_vortOmegaRT.bind();
+	m_vortOmegaShader.bind();
+	m_velRT[m_currentVelRT].color().bind(0);
+	m_screen.draw();
+	m_vortOmegaRT.unbind();
+	m_texcelSMP.unbind(0);
 	//速度移流
 	m_currentVelRT ^= 1;
 	m_velRT[m_currentVelRT].bind();
@@ -232,12 +251,13 @@ void FluidSimStage::onRender() {
 	m_velRT[m_currentVelRT].bind();
 	m_applyForceVelShader.bind();
 	m_velRT[m_currentVelRT ^ 1].color().bind(0);
+	m_vortOmegaRT.color().bind(1);
 	m_screen.draw();
 	m_velRT[m_currentVelRT].unbind();
 	//速度発散
+	m_texcelSMP.bind(0);
 	m_divergenceRT.bind();
 	m_divergenceShader.bind();
-	m_texcelSMP.bind(0);
 	m_velRT[m_currentVelRT].color().bind(0);
 	m_screen.draw();
 	m_divergenceRT.unbind();
@@ -289,6 +309,7 @@ void FluidSimStage::onRender() {
 	else
 		m_renderTexShader.bind();
 	//m_velRT[m_currentVelRT].color().bind(0);
+	//m_vortOmegaRT.color().bind(0);
 	m_colDensRT[m_currentColDensRT].color().bind(0);
 	//m_pressureRT[(m_numJacobiReps - 1) % 2].color().bind(0);
 	m_screen.draw();

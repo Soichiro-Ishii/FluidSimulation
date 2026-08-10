@@ -30,6 +30,8 @@ struct alignas(16) FluidSimInput {
 
 	uint32_t rClick;
 	uint32_t lClick;
+
+	float vortStrength;
 };
 
 class FluidSimStage :
@@ -40,6 +42,7 @@ private:
 	GLRenderTarget m_colDensRT[2];
 	GLRenderTarget m_divergenceRT;
 	GLRenderTarget m_pressureRT[2];
+	GLRenderTarget m_vortOmegaRT;
 	GLShader m_advVelShader;
 	GLShader m_advColDensShader;
 	GLShader m_renderTexShader;
@@ -53,6 +56,7 @@ private:
 	GLShader m_projectionShader;
 	GLShader m_applyForceVelShader;
 	GLShader m_applyInputColDensShader;
+	GLShader m_vortOmegaShader;
 	GLMesh m_screen;
 	GLUniformBuffer m_FSCUB;
 	GLUniformBuffer m_MSUB;
