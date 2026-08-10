@@ -43,22 +43,22 @@ bool FluidSimStage::onInit() {
 		return false;
 	}
 	m_renderDivShader.load("assets\\shaders\\screenVS.glsl", "assets\\shaders\\renderDivergenceFS.glsl");
-	if (!m_divergenceShader.valid()) {
+	if (!m_renderDivShader.valid()) {
 		spdlog::critical("faild to load render divergence Shader");
 		return false;
 	}
 	m_jacobiPressureShader.load("assets\\shaders\\screenVS.glsl", "assets\\shaders\\jacobiPressureFS.glsl");
-	if (!m_divergenceShader.valid()) {
+	if (!m_jacobiPressureShader.valid()) {
 		spdlog::critical("faild to load jacobi pressure Shader");
 		return false;
 	}
 	m_projectionShader.load("assets\\shaders\\screenVS.glsl", "assets\\shaders\\projectionFS.glsl");
-	if (!m_divergenceShader.valid()) {
+	if (!m_projectionShader.valid()) {
 		spdlog::critical("faild to load projection Shader");
 		return false;
 	}
 	m_applyForceVelShader.load("assets\\shaders\\screenVS.glsl", "assets\\shaders\\applyForceVelFS.glsl");
-	if (!m_divergenceShader.valid()) {
+	if (!m_applyForceVelShader.valid()) {
 		spdlog::critical("faild to load apply force to velocity Shader");
 		return false;
 	}
@@ -67,7 +67,7 @@ bool FluidSimStage::onInit() {
 	firstColorDensSet.filter = TEXTURE2DFILTER::LINEAR;
 	firstColorDensSet.wrap = TEXTURE2DWRAP::CLAMP_TO_EDGE;
 	firstColorDensSet.colorSpace = COLOR_SPACE::SRGB;
-	std::string path = "assets\\data\\textures\\fractal.png";
+	std::string path = "assets\\data\\textures\\blackHole.png";
 
 	m_firstColDens.load(path, firstColorDensSet);
 	GLMeshData meshData = ProcMeshGenerator::createScreen();
@@ -206,6 +206,12 @@ void FluidSimStage::onRender() {
 	m_pressureRT[(m_numJacobiReps - 1) % 2].color().bind(1);
 	m_screen.draw();
 	m_velRT[m_currentVelRT].unbind();
+	//速度発散
+	m_divergenceRT.bind();
+	m_divergenceShader.bind();
+	m_velRT[m_currentVelRT].color().bind(0);
+	m_screen.draw();
+	m_divergenceRT.unbind();
 	m_texcelSMP.unbind(0);
 	//色・密度移流
 	m_colDensRT[m_currentRT].bind();

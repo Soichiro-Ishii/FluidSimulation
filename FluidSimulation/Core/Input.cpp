@@ -34,12 +34,12 @@ void Input::update() {
 		m_mouseButton[m_now][i] = glfwGetMouseButton(m_window, i);
 	}
 
+	if (firstFrame)
+		firstFrame = false;
 	if (neverUpdated) {
 		neverUpdated = false;
 		firstFrame = true;
 	}
-	if (firstFrame)
-		firstFrame = false;
 }
 bool Input::isPress(int key) const {
 	if (!m_window) {

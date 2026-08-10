@@ -13,7 +13,7 @@ struct SAMPLER_DESC {
 class GLSampler
 {
 private:
-	GLuint m_id;
+	GLuint m_id = 0;
 	SAMPLER_DESC m_desc;
 public:
 	GLSampler() = default;
