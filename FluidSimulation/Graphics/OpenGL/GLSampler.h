@@ -1,5 +1,5 @@
 #pragma once
-#include"TEXTURE2DSETTING.h"
+#include"TextureSmpSettings.h"
 
 struct SAMPLER_DESC {
 	TEXTURE2DFILTER minFilter = TEXTURE2DFILTER::LINEAR;
@@ -28,7 +28,7 @@ public:
 
 	void create(SAMPLER_DESC _desc);
 	void bind(GLuint _id);
-	void ubBind(GLuint _id);
+	void unbind(GLuint _id);
 
 	[[nodiscard]] GLuint id() {
 		return m_id;

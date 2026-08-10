@@ -35,11 +35,32 @@ protected:
 	[[nodiscard]] const Input& input() const {
 		return m_app->input();
 	}
-	[[nodiscard]] const bool isPress(int key) const {
+	[[nodiscard]] bool isPress(int key) const {
 		return m_app->isPress(key);
 	}
-	[[nodiscard]] const bool isTrigger(int key) const {
+	[[nodiscard]] bool isTrigger(int key) const {
 		return m_app->isTrigger(key);
+	}
+	[[nodiscard]] bool isRelease(int key) const {
+		return m_app->isRelease(key);
+	}
+	[[nodiscard]] bool isMousePress(int button) const {
+		return m_app->isMousePress(button);
+	}
+	[[nodiscard]] bool isMouseTrigger(int button) const {
+		return m_app->isMouseTrigger(button);
+	}
+	[[nodiscard]] bool isMouseRelease(int button) const {
+		return m_app->isMouseRelease(button);
+	}
+	[[nodiscard]] std::optional<glm::vec2> mousePos() const {
+		return m_app->mousePos();
+	}
+	[[nodiscard]] glm::vec2 mouseDelta() const {
+		return m_app->mouseDelta();
+	}
+	[[nodiscard]] glm::vec2 wheelDelta() const {
+		return m_app->wheelDelta();
 	}
 protected:
 	std::string m_name = "default";

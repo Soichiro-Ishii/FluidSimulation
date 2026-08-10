@@ -45,17 +45,59 @@ public:
 	[[nodiscard]] const Input& input() const {
 		return m_input;
 	}
-	[[nodiscard]] const bool isPress(int key) const {
+	[[nodiscard]] bool isPress(int key) const {
 		if (!ImGui::GetIO().WantCaptureKeyboard)
 			return m_input.isPress(key);
 		else
 			return false;
 	}
-	[[nodiscard]] const bool isTrigger(int key) const {
+	[[nodiscard]] bool isTrigger(int key) const {
 		if (!ImGui::GetIO().WantCaptureKeyboard)
 			return m_input.isTrigger(key);
 		else
 			return false;
+	}
+	[[nodiscard]] bool isRelease(int key) const {
+		if (!ImGui::GetIO().WantCaptureKeyboard)
+			return m_input.isRelease(key);
+		else
+			return false;
+	}
+	[[nodiscard]] bool isMousePress(int button) const {
+		if (!ImGui::GetIO().WantCaptureMouse)
+			return m_input.isMousePress(button);
+		else
+			return false;
+	}
+	[[nodiscard]] bool isMouseTrigger(int button) const {
+		if (!ImGui::GetIO().WantCaptureMouse)
+			return m_input.isMouseTrigger(button);
+		else
+			return false;
+	}
+	[[nodiscard]] bool isMouseRelease(int button) const {
+		if (!ImGui::GetIO().WantCaptureMouse)
+			return m_input.isMouseRelease(button);
+		else
+			return false;
+	}
+	[[nodiscard]] std::optional<glm::vec2> mousePos() const {
+		if (!ImGui::GetIO().WantCaptureMouse)
+			return m_input.mousePos();
+		else
+			return std::nullopt;
+	}
+	[[nodiscard]] glm::vec2 mouseDelta() const {
+		if (!ImGui::GetIO().WantCaptureMouse)
+			return m_input.mouseDelta();
+		else
+			return glm::vec2(0.0f, 0.0f);
+	}
+	[[nodiscard]] glm::vec2 wheelDelta() const {
+		if (!ImGui::GetIO().WantCaptureMouse)
+			return m_input.wheelDelta();
+		else
+			return glm::vec2(0.0f, 0.0f);
 	}
 	void setTargetFPS(float newFPS) {
 		m_FPSLimiter.setTargetFPS(static_cast<double>(newFPS));

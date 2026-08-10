@@ -49,7 +49,7 @@ void GLSampler::create(SAMPLER_DESC _desc) {
 void GLSampler::bind(GLuint _id) {
 	glBindSampler(_id, m_id);
 }
-void GLSampler::ubBind(GLuint _id) {
+void GLSampler::unbind(GLuint _id) {
 	glBindSampler(_id, 0);
 }
 

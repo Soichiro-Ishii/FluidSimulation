@@ -278,10 +278,35 @@
     <None Include="assets\shaders\screenVS.glsl">
       <Filter>Assets\Shaders</Filter>
     </None>
-    <None Include="assets\shaders\advectionFS.glsl">
+    <None Include="assets\shaders\advectionVelFS.glsl">
       <Filter>Assets\Shaders</Filter>
     </None>
-    <None Include="assets\shaders\initFluidFS.glsl">
+    <None Include="assets\shaders\initColDensFS.glsl">
+      <Filter>Assets\Shaders</Filter>
+    </None>
+    <None Include="..\README.md" />
+    <None Include="assets\shaders\advectionColDensFS.glsl">
+      <Filter>Assets\Shaders</Filter>
+    </None>
+    <None Include="assets\shaders\initVelFS.glsl">
+      <Filter>Assets\Shaders</Filter>
+    </None>
+    <None Include="assets\shaders\divergenceFS.glsl">
+      <Filter>Assets\Shaders</Filter>
+    </None>
+    <None Include="assets\shaders\renderDivergenceFS.glsl">
+      <Filter>Assets\Shaders</Filter>
+    </None>
+    <None Include="assets\shaders\initPressureFS.glsl">
+      <Filter>Assets\Shaders</Filter>
+    </None>
+    <None Include="assets\shaders\jacobiPressureFS.glsl">
+      <Filter>Assets\Shaders</Filter>
+    </None>
+    <None Include="assets\shaders\projectionFS.glsl">
+      <Filter>Assets\Shaders</Filter>
+    </None>
+    <None Include="assets\shaders\applyForceVelFS.glsl">
       <Filter>Assets\Shaders</Filter>
     </None>
   </ItemGroup>
