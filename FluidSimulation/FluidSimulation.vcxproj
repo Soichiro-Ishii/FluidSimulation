@@ -278,6 +278,7 @@
     <None Include="assets\shaders\advectionColDensFS.glsl" />
     <None Include="assets\shaders\advectionVelFS.glsl" />
     <None Include="assets\shaders\applyForceVelFS.glsl" />
+    <None Include="assets\shaders\applyInputColDensFS.glsl" />
     <None Include="assets\shaders\divergenceFS.glsl" />
     <None Include="assets\shaders\initColDensFS.glsl" />
     <None Include="assets\shaders\initPressureFS.glsl" />
@@ -285,6 +286,7 @@
     <None Include="assets\shaders\jacobiPressureFS.glsl" />
     <None Include="assets\shaders\projectionFS.glsl" />
     <None Include="assets\shaders\renderDivergenceFS.glsl" />
+    <None Include="assets\shaders\renderGradTexFS.glsl" />
     <None Include="assets\shaders\renderTexFS.glsl" />
     <None Include="assets\shaders\screenVS.glsl" />
   </ItemGroup>

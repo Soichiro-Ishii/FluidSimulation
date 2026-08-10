@@ -309,5 +309,11 @@
     <None Include="assets\shaders\applyForceVelFS.glsl">
       <Filter>Assets\Shaders</Filter>
     </None>
+    <None Include="assets\shaders\applyInputColDensFS.glsl">
+      <Filter>Assets\Shaders</Filter>
+    </None>
+    <None Include="assets\shaders\renderGradTexFS.glsl">
+      <Filter>Assets\Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

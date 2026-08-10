@@ -1,14 +1,53 @@
 #include "pch.h"
 #include "FluidSimStage.h"
 #include"ProcMeshGenerator.h"
+
+/**
+ * HSB (HSV) を RGB (glm::vec4) に変換する関数
+ *
+ * @param h Hue (色相): 0.0 〜 1.0
+ * @param s Saturation (彩度): 0.0 〜 1.0
+ * @param b Brightness/Value (明度): 0.0 〜 1.0
+ * @param a Alpha (透明度): 0.0 〜 1.0 (デフォルト 1.0)
+ * @return glm::vec4 (r, g, b, a) 各成分 0.0 〜 1.0
+ */
+glm::vec4 hsb2rgb(float h, float s, float b, float a = 1.0f) {
+	// GLSLでおなじみのベクトル化されたHSB->RGB変換アルゴリズム
+	glm::vec3 K = glm::vec3(1.0f, 2.0f / 3.0f, 1.0f / 3.0f);
+	glm::vec3 p = glm::abs(glm::fract(glm::vec3(h) + K) * 6.0f - glm::vec3(3.0f));
+
+	glm::vec3 rgb = b * glm::mix(glm::vec3(1.0f), glm::clamp(p - glm::vec3(1.0f), 0.0f, 1.0f), s);
+
+	return glm::vec4(rgb, a);
+}
+
+/**
+ * hsb2rgb の glm::vec3 入力用オーバーロード (h: 0~1, s: 0~1, b: 0~1)
+ */
+glm::vec4 hsb2rgb(const glm::vec3& hsb, float a = 1.0f) {
+	return hsb2rgb(hsb.x, hsb.y, hsb.z, a);
+}
+
+/**
+ * Hueを度数 (0°〜360°) で指定したい場合
+ */
+glm::vec4 hsbDegrees2rgb(float h_deg, float s, float b, float a = 1.0f) {
+	return hsb2rgb(h_deg / 360.0f, s, b, a);
+}
+
 FluidSimStage::FluidSimStage()
 {
 	setStageName();
 }
 bool FluidSimStage::onInit() {
 
-	m_lastShader.load("assets\\shaders\\screenVS.glsl", "assets\\shaders\\renderTexFS.glsl");
-	if (!m_lastShader.valid()) {
+	m_renderTexShader.load("assets\\shaders\\screenVS.glsl", "assets\\shaders\\renderTexFS.glsl");
+	if (!m_renderTexShader.valid()) {
+		spdlog::critical("faild to load lastShader");
+		return false;
+	}
+	m_renderGradTexShader.load("assets\\shaders\\screenVS.glsl", "assets\\shaders\\renderGradTexFS.glsl");
+	if (!m_renderGradTexShader.valid()) {
 		spdlog::critical("faild to load lastShader");
 		return false;
 	}
@@ -60,6 +99,11 @@ bool FluidSimStage::onInit() {
 	m_applyForceVelShader.load("assets\\shaders\\screenVS.glsl", "assets\\shaders\\applyForceVelFS.glsl");
 	if (!m_applyForceVelShader.valid()) {
 		spdlog::critical("faild to load apply force to velocity Shader");
+		return false;
+	}
+	m_applyInputColDensShader.load("assets\\shaders\\screenVS.glsl", "assets\\shaders\\applyInputColDensFS.glsl");
+	if (!m_applyInputColDensShader.valid()) {
+		spdlog::critical("faild to load apply input to color and density Shader");
 		return false;
 	}
 
@@ -123,7 +167,7 @@ bool FluidSimStage::onInit() {
 	m_MS.gravity = glm::vec2(0.0f, 0.0f);
 	m_MS.otherForce = glm::vec2(0.0f, 0.0f);
 	m_MS.otherAcc = glm::vec2(0.0f, 0.0f);
-	m_MS.injectColor = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_MS.injectColor = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
 	m_MS.rClick = 0;
 	m_MS.lClick = 0;
 	m_MSUB.create(&m_MS, sizeof(FluidSimInput), 1);
@@ -132,7 +176,6 @@ bool FluidSimStage::onInit() {
 	return true;
 }
 void FluidSimStage::onUpdate(float delta) {
-	m_currentRT ^= 1;
 	m_FSC.time += delta;
 	m_FSC.delta = delta;
 	m_FSCUB.update(&m_FSC, sizeof(FluidSimConstants), 0);
@@ -140,12 +183,21 @@ void FluidSimStage::onUpdate(float delta) {
 	if (mPos != std::nullopt)
 		m_MS.mPos = *mPos;
 	m_MS.mVel = mouseDelta() / delta;
+	m_MS.injectColor = hsb2rgb(m_FSC.time, 1.0f, 1.0f, 1.0f);
 	m_MS.rClick = static_cast<uint32_t>(isMousePress(GLFW_MOUSE_BUTTON_RIGHT));
 	m_MS.lClick = static_cast<uint32_t>(isMousePress(GLFW_MOUSE_BUTTON_LEFT));
+	if (ImGui::Begin("Fluid Simulator")) {
+		ImGui::SliderFloat("interaction Force", &m_MS.interactionForce, 0.0f, 15000.0f);
+		ImGui::SliderFloat("interaction Radius", &m_MS.interactionRadius, 0.0f, 1.0f);
+		if (ImGui::Button("show gradient")) {
+			m_showGrad = !m_showGrad;
+		}
+	}
+	ImGui::End();
 	m_MSUB.update(&m_MS, sizeof(FluidSimInput), 0);
 }
 void FluidSimStage::onRender() {
-	glViewport(0, 0, m_velRT[m_currentRT].width(), m_velRT[m_currentRT].height());
+	glViewport(0, 0, m_velRT[m_currentVelRT].width(), m_velRT[m_currentVelRT].height());
 	if (firstFrame) {
 		for (auto& rt : m_velRT) {
 			rt.bind();
@@ -213,20 +265,31 @@ void FluidSimStage::onRender() {
 	m_screen.draw();
 	m_divergenceRT.unbind();
 	m_texcelSMP.unbind(0);
+	//色・密度追加
+	m_currentColDensRT ^= 1;
+	m_colDensRT[m_currentColDensRT].bind();
+	m_applyInputColDensShader.bind();
+	m_colDensRT[m_currentColDensRT ^ 1].color().bind(0);
+	m_screen.draw();
+	m_colDensRT[m_currentColDensRT].unbind();
 	//色・密度移流
-	m_colDensRT[m_currentRT].bind();
+	m_currentColDensRT ^= 1;
+	m_colDensRT[m_currentColDensRT].bind();
 	m_advColDensShader.bind();
 	m_velRT[m_currentVelRT].color().bind(0);
-	m_colDensRT[m_currentRT ^ 1].color().bind(1);
+	m_colDensRT[m_currentColDensRT ^ 1].color().bind(1);
 	m_screen.draw();
-	m_colDensRT[m_currentRT].unbind();
+	m_colDensRT[m_currentColDensRT].unbind();
 
 	glViewport(0, 0, width(), height());
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
-	m_lastShader.bind();
+	if (m_showGrad)
+		m_renderGradTexShader.bind();
+	else
+		m_renderTexShader.bind();
 	//m_velRT[m_currentVelRT].color().bind(0);
-	m_colDensRT[m_currentRT].color().bind(0);
+	m_colDensRT[m_currentColDensRT].color().bind(0);
 	//m_pressureRT[(m_numJacobiReps - 1) % 2].color().bind(0);
 	m_screen.draw();
 

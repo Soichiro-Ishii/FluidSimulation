@@ -42,7 +42,8 @@ private:
 	GLRenderTarget m_pressureRT[2];
 	GLShader m_advVelShader;
 	GLShader m_advColDensShader;
-	GLShader m_lastShader;
+	GLShader m_renderTexShader;
+	GLShader m_renderGradTexShader;
 	GLShader m_initColDensShader;
 	GLShader m_initVelShader;
 	GLShader m_divergenceShader;
@@ -51,17 +52,19 @@ private:
 	GLShader m_jacobiPressureShader;
 	GLShader m_projectionShader;
 	GLShader m_applyForceVelShader;
+	GLShader m_applyInputColDensShader;
 	GLMesh m_screen;
 	GLUniformBuffer m_FSCUB;
 	GLUniformBuffer m_MSUB;
 	FluidSimConstants m_FSC;
 	FluidSimInput m_MS;
-	char m_currentRT = 0;
+	char m_currentColDensRT = 0;
 	GLTexture2D m_firstColDens;
 	bool firstFrame = true;
 	GLSampler m_texcelSMP;
 	unsigned int m_numJacobiReps = 40;
 	char m_currentVelRT = 0;
+	bool m_showGrad = false;
 public:
 	FluidSimStage();
 	bool onInit() override;
