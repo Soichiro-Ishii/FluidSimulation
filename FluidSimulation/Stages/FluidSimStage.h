@@ -43,6 +43,7 @@ private:
 	GLRenderTarget m_divergenceRT;
 	GLRenderTarget m_pressureRT[2];
 	GLRenderTarget m_vortOmegaRT;
+	std::vector<GLRenderTarget*> m_renderTargets;
 	GLShader m_advVelShader;
 	GLShader m_advColDensShader;
 	GLShader m_renderTexShader;
@@ -64,11 +65,14 @@ private:
 	FluidSimInput m_MS;
 	char m_currentColDensRT = 0;
 	GLTexture2D m_firstColDens;
-	bool firstFrame = true;
+	bool m_shouldReset = true;
 	GLSampler m_texcelSMP;
-	unsigned int m_numJacobiReps = 40;
+	unsigned int m_numJacobiReps = 32;
 	char m_currentVelRT = 0;
 	bool m_showGrad = false;
+	float m_saturation = 1.0f;
+	float m_brightness = 1.0f;
+	bool m_enableImgInit = true;
 public:
 	FluidSimStage();
 	bool onInit() override;
@@ -77,5 +81,6 @@ public:
 	void onShutdown() override;
 private:
 	void setStageName() override;
+	void changeRTResolution(int newWidth, int newHeight);
 };
 

@@ -145,14 +145,22 @@ bool FluidSimStage::onInit() {
 	divergenceDesc.set.filter = TEXTURE2DFILTER::NEAREST;
 	pressureDesc = divergenceDesc;		//共通部分はコピー
 	vortOmegaDesc = divergenceDesc;		//共通部分はコピー
-	for (auto& rt : m_velRT)
+	for (auto& rt : m_velRT) {
 		rt.create(velDesc);
-	for (auto& rt : m_colDensRT)
+		m_renderTargets.push_back(&rt);
+	}
+	for (auto& rt : m_colDensRT) {
 		rt.create(colDensDesc);
+		m_renderTargets.push_back(&rt);
+	}
 	m_divergenceRT.create(divergenceDesc);
-	for (auto& rt : m_pressureRT)
+	m_renderTargets.push_back(&m_divergenceRT);
+	for (auto& rt : m_pressureRT) {
 		rt.create(pressureDesc);
+		m_renderTargets.push_back(&rt);
+	}
 	m_vortOmegaRT.create(vortOmegaDesc);
+	m_renderTargets.push_back(&m_vortOmegaRT);
 
 	SAMPLER_DESC smpDesc;
 	smpDesc.minFilter = TEXTURE2DFILTER::NEAREST;
@@ -181,35 +189,60 @@ bool FluidSimStage::onInit() {
 	m_MS.vortStrength = 30;
 	m_MSUB.create(&m_MS, sizeof(FluidSimInput), 1);
 
+	m_initColDensShader.setUniformUInt("enableImgInit", static_cast<uint32_t>(m_enableImgInit));
+
 	glDisable(GL_DEPTH_TEST);
 	return true;
+}
+void FluidSimStage::changeRTResolution(int newWidth, int newHeight) {
+	for (auto rt : m_renderTargets) {
+		rt->resize(newWidth, newHeight);
+	}
 }
 void FluidSimStage::onUpdate(float delta) {
 	m_FSC.time += delta;
 	m_FSC.delta = delta;
 	m_FSCUB.update(&m_FSC, sizeof(FluidSimConstants), 0);
-	auto mPos = mousePos();
-	if (mPos != std::nullopt)
-		m_MS.mPos = *mPos;
-	m_MS.mVel = mouseDelta() / delta;
-	m_MS.injectColor = hsb2rgb(m_FSC.time, 1.0f, 1.0f, 1.0f);
-	m_MS.rClick = static_cast<uint32_t>(isMousePress(GLFW_MOUSE_BUTTON_RIGHT));
-	m_MS.lClick = static_cast<uint32_t>(isMousePress(GLFW_MOUSE_BUTTON_LEFT));
 	if (ImGui::Begin("Fluid Simulator")) {
 		ImGui::Text("FPS:%.1f", 1 / delta);
 		ImGui::SliderFloat("interaction Force", &m_MS.interactionForce, 0.0f, 15000.0f);
 		ImGui::SliderFloat("interaction Radius", &m_MS.interactionRadius, 0.0f, 1.0f);
 		ImGui::SliderFloat("vorticity strength", &m_MS.vortStrength, 0.0f, 50.0f);
+		ImGui::SliderFloat("saturation", &m_saturation, 0.0f, 1.0f);
+		ImGui::SliderFloat("brightness", &m_brightness, 0.0f, 1.0f);
+		ImGui::SliderInt("jacobi pressure repetition", reinterpret_cast<int*>(&m_numJacobiReps), 0, 128);
 		if (ImGui::Button("show gradient")) {
 			m_showGrad = !m_showGrad;
 		}
+		static int newWidth = width();
+		static int newHeight = height();
+		ImGui::SliderInt("new width", &newWidth, 0.0f, width() * 1.5f);
+		ImGui::SliderInt("new height", &newHeight, 0.0f, height() * 1.5f);
+		if (ImGui::Button("change resolution")) {
+			changeRTResolution(newWidth, newHeight);
+			m_shouldReset = true;
+		}
+		if (ImGui::Checkbox("enable your image reset", &m_enableImgInit)) {
+			m_initColDensShader.setUniformUInt("enableImgInit", static_cast<uint32_t>(m_enableImgInit));
+		}
+		if (ImGui::Button("Reset")) {
+			m_shouldReset = true;
+		}
 	}
+
+	auto mPos = mousePos();
+	if (mPos != std::nullopt)
+		m_MS.mPos = *mPos / glm::vec2(widthf(), heightf()) * m_FSC.resolution;
+	m_MS.mVel = mouseDelta() / delta / glm::vec2(widthf(), heightf()) * m_FSC.resolution;
+	m_MS.injectColor = hsb2rgb(m_FSC.time / 5, m_saturation, m_brightness, 1.0f) * 200.0f;
+	m_MS.rClick = static_cast<uint32_t>(isMousePress(GLFW_MOUSE_BUTTON_RIGHT));
+	m_MS.lClick = static_cast<uint32_t>(isMousePress(GLFW_MOUSE_BUTTON_LEFT));
 	ImGui::End();
 	m_MSUB.update(&m_MS, sizeof(FluidSimInput), 0);
 }
 void FluidSimStage::onRender() {
 	glViewport(0, 0, m_velRT[m_currentVelRT].width(), m_velRT[m_currentVelRT].height());
-	if (firstFrame) {
+	if (m_shouldReset) {
 		for (auto& rt : m_velRT) {
 			rt.bind();
 			m_initVelShader.bind();
@@ -223,7 +256,7 @@ void FluidSimStage::onRender() {
 			m_screen.draw();
 			rt.unbind();
 		}
-		firstFrame = false;
+		m_shouldReset = false;
 	}
 	for (auto& rt : m_pressureRT) {
 		rt.bind();
@@ -231,6 +264,13 @@ void FluidSimStage::onRender() {
 		m_screen.draw();
 		rt.unbind();
 	}
+	//速度移流
+	m_currentVelRT ^= 1;
+	m_velRT[m_currentVelRT].bind();
+	m_advVelShader.bind();
+	m_velRT[m_currentVelRT ^ 1].color().bind(0);
+	m_screen.draw();
+	m_velRT[m_currentVelRT].unbind();
 	//渦度計算
 	m_texcelSMP.bind(0);
 	m_vortOmegaRT.bind();
@@ -239,13 +279,6 @@ void FluidSimStage::onRender() {
 	m_screen.draw();
 	m_vortOmegaRT.unbind();
 	m_texcelSMP.unbind(0);
-	//速度移流
-	m_currentVelRT ^= 1;
-	m_velRT[m_currentVelRT].bind();
-	m_advVelShader.bind();
-	m_velRT[m_currentVelRT ^ 1].color().bind(0);
-	m_screen.draw();
-	m_velRT[m_currentVelRT].unbind();
 	//外力与える
 	m_currentVelRT ^= 1;
 	m_velRT[m_currentVelRT].bind();

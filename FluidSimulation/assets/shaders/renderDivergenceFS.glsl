@@ -8,5 +8,5 @@ layout(location = 0) out vec4 outColor;
 void main(){
 	vec4 tex = texture(uTex,vUV);
 	vec3 d = tex.r > 0 ? vec3(tex.r,0,0) :  vec3(0,0,-tex.r);
-	outColor = vec4(d,0);
+	outColor = vec4(d / 100,0);
 }

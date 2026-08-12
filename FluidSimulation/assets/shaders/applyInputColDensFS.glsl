@@ -37,8 +37,12 @@ void main(){
 	mousePosUV.y = 1.0 - mousePosUV.y;
 	vec2 dirMouse = mousePosUV - vUV;
 	vec4 colDens = texture(uColDens,vUV);
-if(length(dirMouse) < uInteractionRadius && uLClick == 1)
-	outColDens = uInjectColor - colDens;
+	float d = length(dirMouse);
+	float speed = length(uMVel);
+
+if(length(dirMouse) < uInteractionRadius && uLClick == 1 && speed > 0){
+	outColDens = uInjectColor * uDelta - colDens;
+}
 else
 	outColDens = colDens;
 }

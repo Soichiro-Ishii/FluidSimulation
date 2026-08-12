@@ -4,7 +4,7 @@
 
 int main() {
 	FluidSimApp app;
-	int result = app.run(1920, 1080, "FluidSimulation", true);
+	int result = app.run(1920, 1080, "FluidSimulation", false);
 	return result;
 
 }
