@@ -13,6 +13,9 @@ struct alignas(16) FluidSimConstants
 	glm::vec2 resolution;
 	float time;
 	float delta;
+	float vortStrength;
+	float densityDecay;
+	float velocityDecay;
 };
 
 struct alignas(16) FluidSimInput {
@@ -30,8 +33,6 @@ struct alignas(16) FluidSimInput {
 
 	uint32_t rClick;
 	uint32_t lClick;
-
-	float vortStrength;
 };
 
 class FluidSimStage :

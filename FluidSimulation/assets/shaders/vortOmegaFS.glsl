@@ -8,6 +8,9 @@ layout(std140, binding = 0) uniform FluidSimConstants
     vec2 uResolution;
     float uTime;
     float uDelta;
+	float vortStrength;
+	float densityDecay;
+	float velocityDecay;
 };
 
 layout(std140, binding = 1) uniform FluidSimInput
@@ -26,8 +29,6 @@ layout(std140, binding = 1) uniform FluidSimInput
 
 	uint uRClick;
 	uint uLClick;
-
-	float vortStrength;
 };
 
 layout(location = 0) out float outVortOmega;

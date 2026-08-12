@@ -174,6 +174,9 @@ bool FluidSimStage::onInit() {
 	m_FSC.resolution.y = heightf();
 	m_FSC.time = 0.0f;
 	m_FSC.delta = 0.0f;
+	m_FSC.vortStrength = 30;
+	m_FSC.densityDecay = 0.0f;
+	m_FSC.velocityDecay = 0.0f;
 	m_FSCUB.create(&m_FSC, sizeof(FluidSimConstants), 0);
 
 	m_MS.mPos = glm::vec2(0.0f, 0.0f);
@@ -186,7 +189,6 @@ bool FluidSimStage::onInit() {
 	m_MS.injectColor = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
 	m_MS.rClick = 0;
 	m_MS.lClick = 0;
-	m_MS.vortStrength = 30;
 	m_MSUB.create(&m_MS, sizeof(FluidSimInput), 1);
 
 	m_initColDensShader.setUniformUInt("enableImgInit", static_cast<uint32_t>(m_enableImgInit));
@@ -206,11 +208,13 @@ void FluidSimStage::onUpdate(float delta) {
 	if (ImGui::Begin("Fluid Simulator")) {
 		ImGui::Text("FPS:%.1f", 1 / delta);
 		ImGui::SliderFloat("interaction Force", &m_MS.interactionForce, 0.0f, 15000.0f);
-		ImGui::SliderFloat("interaction Radius", &m_MS.interactionRadius, 0.0f, 1.0f);
-		ImGui::SliderFloat("vorticity strength", &m_MS.vortStrength, 0.0f, 50.0f);
+		ImGui::SliderFloat("interaction Radius", &m_MS.interactionRadius, 0.0f, 0.2f);
+		ImGui::SliderFloat("vorticity strength", &m_FSC.vortStrength, 0.0f, 50.0f);
 		ImGui::SliderFloat("saturation", &m_saturation, 0.0f, 1.0f);
 		ImGui::SliderFloat("brightness", &m_brightness, 0.0f, 1.0f);
 		ImGui::SliderInt("jacobi pressure repetition", reinterpret_cast<int*>(&m_numJacobiReps), 0, 128);
+		ImGui::SliderFloat("density Decay", &m_FSC.densityDecay, 0.0f, 2.0f);
+		ImGui::SliderFloat("velocity Decay", &m_FSC.velocityDecay, 0.0f, 2.0f);
 		if (ImGui::Button("show gradient")) {
 			m_showGrad = !m_showGrad;
 		}
@@ -241,14 +245,15 @@ void FluidSimStage::onUpdate(float delta) {
 	m_MSUB.update(&m_MS, sizeof(FluidSimInput), 0);
 }
 void FluidSimStage::onRender() {
-	glViewport(0, 0, m_velRT[m_currentVelRT].width(), m_velRT[m_currentVelRT].height());
 	if (m_shouldReset) {
+		glViewport(0, 0, m_velRT[m_currentVelRT].width(), m_velRT[m_currentVelRT].height());
 		for (auto& rt : m_velRT) {
 			rt.bind();
 			m_initVelShader.bind();
 			m_screen.draw();
 			rt.unbind();
 		}
+		glViewport(0, 0, m_colDensRT[m_currentColDensRT].width(), m_velRT[m_currentColDensRT].height());
 		for (auto& rt : m_colDensRT) {
 			rt.bind();
 			m_initColDensShader.bind();
@@ -258,6 +263,7 @@ void FluidSimStage::onRender() {
 		}
 		m_shouldReset = false;
 	}
+	glViewport(0, 0, m_pressureRT[0].width(), m_pressureRT[0].height());
 	for (auto& rt : m_pressureRT) {
 		rt.bind();
 		m_initPressureShader.bind();
@@ -266,6 +272,7 @@ void FluidSimStage::onRender() {
 	}
 	//速度移流
 	m_currentVelRT ^= 1;
+	glViewport(0, 0, m_velRT[m_currentVelRT].width(), m_velRT[m_currentVelRT].height());
 	m_velRT[m_currentVelRT].bind();
 	m_advVelShader.bind();
 	m_velRT[m_currentVelRT ^ 1].color().bind(0);
@@ -273,6 +280,7 @@ void FluidSimStage::onRender() {
 	m_velRT[m_currentVelRT].unbind();
 	//渦度計算
 	m_texcelSMP.bind(0);
+	glViewport(0, 0, m_vortOmegaRT.width(), m_vortOmegaRT.height());
 	m_vortOmegaRT.bind();
 	m_vortOmegaShader.bind();
 	m_velRT[m_currentVelRT].color().bind(0);
@@ -281,6 +289,7 @@ void FluidSimStage::onRender() {
 	m_texcelSMP.unbind(0);
 	//外力与える
 	m_currentVelRT ^= 1;
+	glViewport(0, 0, m_velRT[m_currentVelRT].width(), m_velRT[m_currentVelRT].height());
 	m_velRT[m_currentVelRT].bind();
 	m_applyForceVelShader.bind();
 	m_velRT[m_currentVelRT ^ 1].color().bind(0);
@@ -289,12 +298,14 @@ void FluidSimStage::onRender() {
 	m_velRT[m_currentVelRT].unbind();
 	//速度発散
 	m_texcelSMP.bind(0);
+	glViewport(0, 0, m_divergenceRT.width(), m_divergenceRT.height());
 	m_divergenceRT.bind();
 	m_divergenceShader.bind();
 	m_velRT[m_currentVelRT].color().bind(0);
 	m_screen.draw();
 	m_divergenceRT.unbind();
 	//jacobi法による圧力計算
+	glViewport(0, 0, m_pressureRT[0].width(), m_pressureRT[0].height());
 	for (int i = 0; i < m_numJacobiReps; i++) {
 		char currentPressureRT = i % 2;
 		m_pressureRT[currentPressureRT].bind();
@@ -305,6 +316,7 @@ void FluidSimStage::onRender() {
 	}
 	//projection
 	m_currentVelRT ^= 1;
+	glViewport(0, 0, m_velRT[m_currentVelRT].width(), m_velRT[m_currentVelRT].height());
 	m_velRT[m_currentVelRT].bind();
 	m_projectionShader.bind();
 	m_velRT[m_currentVelRT ^ 1].color().bind(0);
@@ -312,6 +324,7 @@ void FluidSimStage::onRender() {
 	m_screen.draw();
 	m_velRT[m_currentVelRT].unbind();
 	//速度発散
+	glViewport(0, 0, m_divergenceRT.width(), m_divergenceRT.height());
 	m_divergenceRT.bind();
 	m_divergenceShader.bind();
 	m_velRT[m_currentVelRT].color().bind(0);
@@ -320,6 +333,7 @@ void FluidSimStage::onRender() {
 	m_texcelSMP.unbind(0);
 	//色・密度追加
 	m_currentColDensRT ^= 1;
+	glViewport(0, 0, m_colDensRT[m_currentColDensRT].width(), m_velRT[m_currentColDensRT].height());
 	m_colDensRT[m_currentColDensRT].bind();
 	m_applyInputColDensShader.bind();
 	m_colDensRT[m_currentColDensRT ^ 1].color().bind(0);
@@ -327,6 +341,7 @@ void FluidSimStage::onRender() {
 	m_colDensRT[m_currentColDensRT].unbind();
 	//色・密度移流
 	m_currentColDensRT ^= 1;
+	glViewport(0, 0, m_colDensRT[m_currentColDensRT].width(), m_velRT[m_currentColDensRT].height());
 	m_colDensRT[m_currentColDensRT].bind();
 	m_advColDensShader.bind();
 	m_velRT[m_currentVelRT].color().bind(0);

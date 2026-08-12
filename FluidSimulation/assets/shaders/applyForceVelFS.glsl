@@ -9,6 +9,9 @@ layout(std140, binding = 0) uniform FluidSimConstants
     vec2 uResolution;
     float uTime;
     float uDelta;
+	float vortStrength;
+	float densityDecay;
+	float velocityDecay;
 };
 
 layout(std140, binding = 1) uniform FluidSimInput
@@ -27,8 +30,6 @@ layout(std140, binding = 1) uniform FluidSimInput
 
 	uint uRClick;
 	uint uLClick;
-
-	float vortStrength;
 };
 
 layout(location = 0) out vec2 outVel;
@@ -42,10 +43,17 @@ void main(){
 	vec2 dirMouse = mousePosUV - vUV;
 	vec2 vel = texture(uVel,vUV).xy;
 	float mouseSpeed = length(mouseDeltaUV);
-if(length(dirMouse) < uInteractionRadius && (uRClick == 1 || uLClick == 1) && mouseSpeed > 1e-6)
-	F = mouseDeltaUV * uInteractionForce;
-else
-	F = vec2(0);
+	float d = length(dirMouse);
+if((uRClick == 1 || uLClick == 1) && mouseSpeed > 1e-6){
+	float d = length(dirMouse);
+	float weight =
+    1.0 - smoothstep(
+        0.0,
+        uInteractionRadius,
+        d
+    );
+	F = mouseDeltaUV * uInteractionForce * weight;
+}
 
 	float wR = abs(textureOffset(uVortOmega,vUV,ivec2(1,0),0).r);
 	float wL = abs(textureOffset(uVortOmega,vUV,ivec2(-1,0),0).r);
@@ -56,5 +64,8 @@ else
 	vec2 N = gradAbsW / (length(gradAbsW) + 1e-6);
 	float w = texture(uVortOmega,vUV).r;
 	F += vortStrength * w * vec2(N.y,-N.x);
+
+	vec2 p = vUV * 2.0 - 1.0;
 	outVel = vel + F * uDelta;
+	outVel *= exp(-velocityDecay * uDelta);
 }
