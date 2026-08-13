@@ -253,7 +253,7 @@ void FluidSimStage::onRender() {
 			m_screen.draw();
 			rt.unbind();
 		}
-		glViewport(0, 0, m_colDensRT[m_currentColDensRT].width(), m_velRT[m_currentColDensRT].height());
+		glViewport(0, 0, m_colDensRT[m_currentColDensRT].width(), m_colDensRT[m_currentColDensRT].height());
 		for (auto& rt : m_colDensRT) {
 			rt.bind();
 			m_initColDensShader.bind();
@@ -333,7 +333,7 @@ void FluidSimStage::onRender() {
 	m_texcelSMP.unbind(0);
 	//色・密度追加
 	m_currentColDensRT ^= 1;
-	glViewport(0, 0, m_colDensRT[m_currentColDensRT].width(), m_velRT[m_currentColDensRT].height());
+	glViewport(0, 0, m_colDensRT[m_currentColDensRT].width(), m_colDensRT[m_currentColDensRT].height());
 	m_colDensRT[m_currentColDensRT].bind();
 	m_applyInputColDensShader.bind();
 	m_colDensRT[m_currentColDensRT ^ 1].color().bind(0);
@@ -341,7 +341,7 @@ void FluidSimStage::onRender() {
 	m_colDensRT[m_currentColDensRT].unbind();
 	//色・密度移流
 	m_currentColDensRT ^= 1;
-	glViewport(0, 0, m_colDensRT[m_currentColDensRT].width(), m_velRT[m_currentColDensRT].height());
+	glViewport(0, 0, m_colDensRT[m_currentColDensRT].width(), m_colDensRT[m_currentColDensRT].height());
 	m_colDensRT[m_currentColDensRT].bind();
 	m_advColDensShader.bind();
 	m_velRT[m_currentVelRT].color().bind(0);
