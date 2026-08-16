@@ -62,7 +62,7 @@ private:
 	GLRenderTarget m_divergenceRT;
 	GLRenderTarget m_pressureRT[2];
 	GLRenderTarget m_vortOmegaRT;
-	std::vector<GLRenderTarget*> m_renderTargets;
+	std::vector<GLRenderTarget*> m_notDensRenderTargets;
 	GLShader m_advVelShader;
 	GLShader m_advColDensShader;
 	GLShader m_renderTexShader;

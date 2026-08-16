@@ -147,20 +147,19 @@ bool FluidSimStage::onInit() {
 	vortOmegaDesc = divergenceDesc;		//共通部分はコピー
 	for (auto& rt : m_velRT) {
 		rt.create(velDesc);
-		m_renderTargets.push_back(&rt);
+		m_notDensRenderTargets.push_back(&rt);
 	}
 	for (auto& rt : m_colDensRT) {
 		rt.create(colDensDesc);
-		m_renderTargets.push_back(&rt);
 	}
 	m_divergenceRT.create(divergenceDesc);
-	m_renderTargets.push_back(&m_divergenceRT);
+	m_notDensRenderTargets.push_back(&m_divergenceRT);
 	for (auto& rt : m_pressureRT) {
 		rt.create(pressureDesc);
-		m_renderTargets.push_back(&rt);
+		m_notDensRenderTargets.push_back(&rt);
 	}
 	m_vortOmegaRT.create(vortOmegaDesc);
-	m_renderTargets.push_back(&m_vortOmegaRT);
+	m_notDensRenderTargets.push_back(&m_vortOmegaRT);
 
 	SAMPLER_DESC smpDesc;
 	smpDesc.minFilter = TEXTURE2DFILTER::NEAREST;
@@ -205,7 +204,7 @@ bool FluidSimStage::onInit() {
 	return true;
 }
 void FluidSimStage::changeRTResolution(int newWidth, int newHeight) {
-	for (auto rt : m_renderTargets) {
+	for (auto rt : m_notDensRenderTargets) {
 		rt->resize(newWidth, newHeight);
 	}
 }
@@ -214,6 +213,8 @@ void FluidSimStage::onUpdate(float delta) {
 	m_FSC.delta = delta;
 	static int newWidth = width();
 	static int newHeight = height();
+	static int newDensWidth = width();
+	static int newDensHeight = height();
 	static bool enableSub = false;
 	static glm::vec4 innerCol = glm::vec4(1.0f);
 	static glm::vec4 outerCol = glm::vec4(1.0f);
@@ -292,8 +293,20 @@ void FluidSimStage::onUpdate(float delta) {
 		if (ImGui::CollapsingHeader("reset")) {
 			ImGui::SliderInt("new width", &newWidth, 0.0f, width() * 1.5f);
 			ImGui::SliderInt("new height", &newHeight, 0.0f, height() * 1.5f);
+			ImGui::SliderInt("new density width", &newDensWidth, 0.0f, width() * 1.5f);
+			ImGui::SliderInt("new density height", &newDensHeight, 0.0f, height() * 1.5f);
 			if (ImGui::Button("change resolution")) {
+				m_FSC.resolution.x = newWidth;
+				m_FSC.resolution.y = newHeight;
 				changeRTResolution(newWidth, newHeight);
+				m_shouldReset = true;
+			}
+			if (ImGui::Button("change density resolution")) {
+				m_FSC.densityResolution.x = newDensWidth;
+				m_FSC.densityResolution.y = newDensHeight;
+				for (auto& rt : m_colDensRT) {
+					rt.resize(newDensWidth, newDensHeight);
+				}
 				m_shouldReset = true;
 			}
 			if (ImGui::Checkbox("enable your image reset", &m_enableImgInit)) {
