@@ -10,6 +10,15 @@ layout(std140, binding = 0) uniform FluidSimConstants
 	float vortStrength;
 	float densityDecay;
 	float velocityDecay;
+	uint enableSub;
+
+	vec2 uDensityResolution;
+	float uPressureRetention;
+	float uVelocityDiffusion;
+
+	float uDensityDiffusion;
+	float uCellSize;
+	float uCellSizeSq;
 };
 
 layout(std140, binding = 1) uniform FluidSimInput
@@ -25,6 +34,8 @@ layout(std140, binding = 1) uniform FluidSimInput
 	vec2 uOtherAcc;
 
 	vec4 uInjectColor;
+	
+	vec4 uInjectOutColor;
 
 	uint uRClick;
 	uint uLClick;

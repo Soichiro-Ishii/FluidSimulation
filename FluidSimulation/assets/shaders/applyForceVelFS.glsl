@@ -12,6 +12,15 @@ layout(std140, binding = 0) uniform FluidSimConstants
 	float vortStrength;
 	float densityDecay;
 	float velocityDecay;
+	uint enableSub;
+
+	vec2 uDensityResolution;
+	float uPressureRetention;
+	float uVelocityDiffusion;
+
+	float uDensityDiffusion;
+	float uCellSize;
+	float uCellSizeSq;
 };
 
 layout(std140, binding = 1) uniform FluidSimInput
@@ -27,6 +36,8 @@ layout(std140, binding = 1) uniform FluidSimInput
 	vec2 uOtherAcc;
 
 	vec4 uInjectColor;
+	
+	vec4 uInjectOutColor;
 
 	uint uRClick;
 	uint uLClick;
@@ -44,16 +55,16 @@ void main(){
 	vec2 vel = texture(uVel,vUV).xy;
 	float mouseSpeed = length(mouseDeltaUV);
 	float d = length(dirMouse);
-if((uRClick == 1 || uLClick == 1) && mouseSpeed > 1e-6){
-	float d = length(dirMouse);
-	float weight =
-    1.0 - smoothstep(
-        0.0,
-        uInteractionRadius,
-        d
-    );
-	F = mouseDeltaUV * uInteractionForce * weight;
-}
+	if((uRClick == 1 || uLClick == 1) && mouseSpeed > 1e-6){
+		float d2 = dot(dirMouse, dirMouse);
+
+		float sigma = uInteractionRadius * 0.4;
+
+		float weight = exp(
+			-d2 / (2.0 * sigma * sigma)
+		);
+		F = mouseDeltaUV * uInteractionForce * weight;
+	}
 
 	float wR = abs(textureOffset(uVortOmega,vUV,ivec2(1,0),0).r);
 	float wL = abs(textureOffset(uVortOmega,vUV,ivec2(-1,0),0).r);

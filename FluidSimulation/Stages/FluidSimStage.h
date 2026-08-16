@@ -13,9 +13,19 @@ struct alignas(16) FluidSimConstants
 	glm::vec2 resolution;
 	float time;
 	float delta;
+
 	float vortStrength;
 	float densityDecay;
 	float velocityDecay;
+	uint32_t enableSub;
+
+	glm::vec2 densityResolution;
+	float pressureRetention;
+	float velocityDiffusion;
+
+	float densityDiffusion;
+	float cellSize;
+	float cellSizeSq;
 };
 
 struct alignas(16) FluidSimInput {
@@ -31,8 +41,16 @@ struct alignas(16) FluidSimInput {
 
 	glm::vec4 injectColor;
 
+	glm::vec4 injectOutColor;
+
 	uint32_t rClick;
 	uint32_t lClick;
+
+};
+
+enum class COLOR_CONTROL_MODE {
+	RAINBOW,
+	OWN
 };
 
 class FluidSimStage :
@@ -71,9 +89,16 @@ private:
 	unsigned int m_numJacobiReps = 32;
 	char m_currentVelRT = 0;
 	bool m_showGrad = false;
-	float m_saturation = 1.0f;
-	float m_brightness = 1.0f;
 	bool m_enableImgInit = true;
+	float m_phaseShift = 0.5f;
+	float m_colChangeSpeed = 1.0f / 5.0f;
+	float m_inSaturation = 1.0f;
+	float m_inBrightness = 1.0f;
+	float m_outSaturation = 1.0f;
+	float m_outBrightness = 1.0f;
+	COLOR_CONTROL_MODE m_inColCtrMode = COLOR_CONTROL_MODE::RAINBOW;
+	COLOR_CONTROL_MODE m_outColCtrMode = COLOR_CONTROL_MODE::RAINBOW;
+	float m_colorStrength = 200.0f;
 public:
 	FluidSimStage();
 	bool onInit() override;

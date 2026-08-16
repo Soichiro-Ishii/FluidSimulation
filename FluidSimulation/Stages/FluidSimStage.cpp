@@ -177,6 +177,13 @@ bool FluidSimStage::onInit() {
 	m_FSC.vortStrength = 30;
 	m_FSC.densityDecay = 0.0f;
 	m_FSC.velocityDecay = 0.0f;
+	m_FSC.enableSub = 0;
+	m_FSC.densityResolution = glm::vec2(widthf(), heightf());
+	m_FSC.pressureRetention = 0.0f;
+	m_FSC.velocityDiffusion = 0.0f;
+	m_FSC.densityDiffusion = 0.0f;
+	m_FSC.cellSize = 1.0f;
+	m_FSC.cellSizeSq = 1.0f;
 	m_FSCUB.create(&m_FSC, sizeof(FluidSimConstants), 0);
 
 	m_MS.mPos = glm::vec2(0.0f, 0.0f);
@@ -187,6 +194,7 @@ bool FluidSimStage::onInit() {
 	m_MS.otherForce = glm::vec2(0.0f, 0.0f);
 	m_MS.otherAcc = glm::vec2(0.0f, 0.0f);
 	m_MS.injectColor = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+	m_MS.injectOutColor = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
 	m_MS.rClick = 0;
 	m_MS.lClick = 0;
 	m_MSUB.create(&m_MS, sizeof(FluidSimInput), 1);
@@ -204,45 +212,120 @@ void FluidSimStage::changeRTResolution(int newWidth, int newHeight) {
 void FluidSimStage::onUpdate(float delta) {
 	m_FSC.time += delta;
 	m_FSC.delta = delta;
-	m_FSCUB.update(&m_FSC, sizeof(FluidSimConstants), 0);
+	static int newWidth = width();
+	static int newHeight = height();
+	static bool enableSub = false;
+	static glm::vec4 innerCol = glm::vec4(1.0f);
+	static glm::vec4 outerCol = glm::vec4(1.0f);
+	static constexpr const char* colorCtrNames[] = {
+		"rainbow control",
+		"own control"
+	};
 	if (ImGui::Begin("Fluid Simulator")) {
-		ImGui::Text("FPS:%.1f", 1 / delta);
-		ImGui::SliderFloat("interaction Force", &m_MS.interactionForce, 0.0f, 15000.0f);
-		ImGui::SliderFloat("interaction Radius", &m_MS.interactionRadius, 0.0f, 0.2f);
-		ImGui::SliderFloat("vorticity strength", &m_FSC.vortStrength, 0.0f, 50.0f);
-		ImGui::SliderFloat("saturation", &m_saturation, 0.0f, 1.0f);
-		ImGui::SliderFloat("brightness", &m_brightness, 0.0f, 1.0f);
-		ImGui::SliderInt("jacobi pressure repetition", reinterpret_cast<int*>(&m_numJacobiReps), 0, 128);
-		ImGui::SliderFloat("density Decay", &m_FSC.densityDecay, 0.0f, 2.0f);
-		ImGui::SliderFloat("velocity Decay", &m_FSC.velocityDecay, 0.0f, 2.0f);
-		if (ImGui::Button("show gradient")) {
-			m_showGrad = !m_showGrad;
+		ImGui::Text("FPS:%.1f delta:%.1fms", 1 / delta, delta * 1000);
+		if (ImGui::CollapsingHeader("state")) {
+			ImGui::SliderFloat("interaction Force", &m_MS.interactionForce, 0.0f, 15000.0f);
+			ImGui::SliderFloat("interaction Radius", &m_MS.interactionRadius, 0.0f, 0.2f);
+			ImGui::SliderFloat("vorticity strength", &m_FSC.vortStrength, 0.0f, 50.0f);
+			ImGui::SliderInt("jacobi pressure repetition", reinterpret_cast<int*>(&m_numJacobiReps), 0, 128);
+			ImGui::SliderFloat("density Decay", &m_FSC.densityDecay, 0.0f, 2.0f);
+			ImGui::SliderFloat("velocity Decay", &m_FSC.velocityDecay, 0.0f, 2.0f);
 		}
-		static int newWidth = width();
-		static int newHeight = height();
-		ImGui::SliderInt("new width", &newWidth, 0.0f, width() * 1.5f);
-		ImGui::SliderInt("new height", &newHeight, 0.0f, height() * 1.5f);
-		if (ImGui::Button("change resolution")) {
-			changeRTResolution(newWidth, newHeight);
-			m_shouldReset = true;
+		if (ImGui::CollapsingHeader("color")) {
+
+			ImGui::Text("inner color");
+			ImGui::Separator();
+
+			int inCurrentCtr = static_cast<int>(m_inColCtrMode);
+			if (ImGui::Combo(
+				"inner color control mode",
+				&inCurrentCtr,
+				colorCtrNames,
+				IM_ARRAYSIZE(colorCtrNames)))
+			{
+				m_inColCtrMode = static_cast<COLOR_CONTROL_MODE>(inCurrentCtr);
+			}
+
+			if (m_inColCtrMode == COLOR_CONTROL_MODE::RAINBOW) {
+				ImGui::SliderFloat("inner saturation", &m_inSaturation, 0.0f, 1.0f);
+				ImGui::SliderFloat("inner brightness", &m_inBrightness, 0.0f, 1.0f);
+			}
+			else if (m_inColCtrMode == COLOR_CONTROL_MODE::OWN) {
+				ImGui::ColorEdit4("inner color", &innerCol[0]);
+			}
+			ImGui::Separator();
+			ImGui::Text("outer color");
+			ImGui::Separator();
+
+			int outCurrentCtr = static_cast<int>(m_outColCtrMode);
+			if (ImGui::Combo(
+				"outer color control mode",
+				&outCurrentCtr,
+				colorCtrNames,
+				IM_ARRAYSIZE(colorCtrNames)))
+			{
+				m_outColCtrMode = static_cast<COLOR_CONTROL_MODE>(outCurrentCtr);
+			}
+
+			if (m_outColCtrMode == COLOR_CONTROL_MODE::RAINBOW) {
+				ImGui::SliderFloat("outer saturation", &m_outSaturation, 0.0f, 1.0f);
+				ImGui::SliderFloat("outer brightness", &m_outBrightness, 0.0f, 1.0f);
+			}
+			else if (m_outColCtrMode == COLOR_CONTROL_MODE::OWN) {
+				ImGui::ColorEdit4("outer color", &outerCol[0]);
+			}
+			ImGui::Separator();
+
+			ImGui::SliderFloat("color strength", &m_colorStrength, 0.0f, 300.0f);
+			ImGui::SliderFloat("phase shift", &m_phaseShift, 0.0f, 1.0f);
+			ImGui::SliderFloat("color change speed", &m_colChangeSpeed, 0.0f, 3.0f);
+
+			if (ImGui::Checkbox("enable subtractive color mixing.", &enableSub)) {
+				m_FSC.enableSub = static_cast<uint32_t>(enableSub);
+			}
 		}
-		if (ImGui::Checkbox("enable your image reset", &m_enableImgInit)) {
-			m_initColDensShader.setUniformUInt("enableImgInit", static_cast<uint32_t>(m_enableImgInit));
+		if (ImGui::CollapsingHeader("visual")) {
+			if (ImGui::Button("show gradient")) {
+				m_showGrad = !m_showGrad;
+			}
 		}
-		if (ImGui::Button("Reset")) {
-			m_shouldReset = true;
+		if (ImGui::CollapsingHeader("reset")) {
+			ImGui::SliderInt("new width", &newWidth, 0.0f, width() * 1.5f);
+			ImGui::SliderInt("new height", &newHeight, 0.0f, height() * 1.5f);
+			if (ImGui::Button("change resolution")) {
+				changeRTResolution(newWidth, newHeight);
+				m_shouldReset = true;
+			}
+			if (ImGui::Checkbox("enable your image reset", &m_enableImgInit)) {
+				m_initColDensShader.setUniformUInt("enableImgInit", static_cast<uint32_t>(m_enableImgInit));
+			}
+			if (ImGui::Button("Reset")) {
+				m_shouldReset = true;
+			}
 		}
 	}
+	ImGui::End();
 
 	auto mPos = mousePos();
 	if (mPos != std::nullopt)
 		m_MS.mPos = *mPos / glm::vec2(widthf(), heightf()) * m_FSC.resolution;
 	m_MS.mVel = mouseDelta() / delta / glm::vec2(widthf(), heightf()) * m_FSC.resolution;
-	m_MS.injectColor = hsb2rgb(m_FSC.time / 5, m_saturation, m_brightness, 1.0f) * 200.0f;
+	if (m_inColCtrMode == COLOR_CONTROL_MODE::RAINBOW) {
+		m_MS.injectColor = hsb2rgb(m_FSC.time * m_colChangeSpeed, m_inSaturation, m_inBrightness, 1.0f) * m_colorStrength;
+	}
+	else if (m_inColCtrMode == COLOR_CONTROL_MODE::OWN) {
+		m_MS.injectColor = innerCol * m_colorStrength;
+	}
+	if (m_outColCtrMode == COLOR_CONTROL_MODE::RAINBOW) {
+		m_MS.injectOutColor = hsb2rgb((m_FSC.time * m_colChangeSpeed) - m_phaseShift, m_outSaturation, m_outBrightness, 1.0f) * m_colorStrength;
+	}
+	else if (m_outColCtrMode == COLOR_CONTROL_MODE::OWN) {
+		m_MS.injectOutColor = outerCol * m_colorStrength;
+	}
 	m_MS.rClick = static_cast<uint32_t>(isMousePress(GLFW_MOUSE_BUTTON_RIGHT));
 	m_MS.lClick = static_cast<uint32_t>(isMousePress(GLFW_MOUSE_BUTTON_LEFT));
-	ImGui::End();
 	m_MSUB.update(&m_MS, sizeof(FluidSimInput), 0);
+	m_FSCUB.update(&m_FSC, sizeof(FluidSimConstants), 0);
 }
 void FluidSimStage::onRender() {
 	if (m_shouldReset) {

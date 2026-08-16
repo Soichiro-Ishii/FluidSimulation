@@ -11,6 +11,15 @@ layout(std140, binding = 0) uniform FluidSimConstants
 	float vortStrength;
 	float densityDecay;
 	float velocityDecay;
+	uint enableSub;
+
+	vec2 uDensityResolution;
+	float uPressureRetention;
+	float uVelocityDiffusion;
+
+	float uDensityDiffusion;
+	float uCellSize;
+	float uCellSizeSq;
 };
 
 layout(std140, binding = 1) uniform FluidSimInput
@@ -26,6 +35,8 @@ layout(std140, binding = 1) uniform FluidSimInput
 	vec2 uOtherAcc;
 
 	vec4 uInjectColor;
+	
+	vec4 uInjectOutColor;
 
 	uint uRClick;
 	uint uLClick;
@@ -41,19 +52,30 @@ void main(){
 	float d = length(dirMouse);
 	float speed = length(uMVel);
 
-if(uLClick == 1 && speed > 0){
-	float d2 = dot(dirMouse, dirMouse);
+	if(uLClick == 1 && speed > 0){
+		float d2 = dot(dirMouse, dirMouse);
 
-	float sigma = uInteractionRadius * 0.4;
+		float sigma = uInteractionRadius * 0.4;
 
-	float weight = exp(
-		-d2 / (2.0 * sigma * sigma)
-	);
-	float t = 1.0 - (d / uInteractionRadius);
-	outColDens = uInjectColor * weight * uDelta + colDens;
-}
-else
+		float weight = exp(
+			-d2 / (2.0 * sigma * sigma)
+		);
+
+		float r = clamp(d / uInteractionRadius, 0.0, 1.0);
+		float t = 1.0 - smoothstep(0.3, 0.7, r);
+		vec4 inject = mix(uInjectOutColor,uInjectColor,t);
+
+		outColDens = inject * weight * uDelta;
+
+		if(enableSub == 0)
+			outColDens += colDens;
+		else
+			outColDens = colDens - outColDens;
+
+		outColDens *= exp(-densityDecay * uDelta);
+	}
+	else{
 	outColDens = colDens;
+	}
 
-	outColDens *= exp(-densityDecay * uDelta);
 }
