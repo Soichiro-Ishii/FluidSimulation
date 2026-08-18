@@ -2,9 +2,21 @@
 #include "FluidSimApp.h"
 #include"ProcMeshGenerator.h"
 #include"FluidSimStage.h"
+#include <stb_image.h>
 
 bool FluidSimApp::onInit() {
 	m_stageManager.setStageManager(this);
+
+	GLFWimage icon{};
+
+	icon.pixels = stbi_load("icon.png", &icon.width, &icon.height, nullptr, 4);
+
+	if (icon.pixels)
+	{
+		glfwSetWindowIcon(window(), 1, &icon);
+		stbi_image_free(icon.pixels);
+	}
+
 	return m_stageManager.change(std::make_unique<FluidSimStage>());
 }
 void FluidSimApp::onUpdate(float delta) {

@@ -293,6 +293,9 @@
     <None Include="assets\shaders\screenVS.glsl" />
     <None Include="assets\shaders\vortOmegaFS.glsl" />
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="FluidSimulation.rc" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
