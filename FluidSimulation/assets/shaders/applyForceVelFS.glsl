@@ -63,7 +63,7 @@ void main(){
 		float weight = exp(
 			-d2 / (2.0 * sigma * sigma)
 		);
-		F = mouseDeltaUV * uInteractionForce * weight;
+		F = mouseDeltaUV * uInteractionForce * weight * uCellSize;
 	}
 
 	float wR = abs(textureOffset(uVortOmega,vUV,ivec2(1,0),0).r);

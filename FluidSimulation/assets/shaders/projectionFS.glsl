@@ -51,6 +51,6 @@ void main(){
     float pT = textureOffset(uPressure,vUV,ivec2(0, 1)).x;
     float pB = textureOffset(uPressure,vUV,ivec2(0,-1)).x;
 
-    vec2 gradP = 0.5 * vec2(pR - pL,pT - pB);
+    vec2 gradP = vec2(pR - pL,pT - pB) / (2.0 * uCellSize);
     outVel = texture(uVel, vUV).xy - gradP;
 }

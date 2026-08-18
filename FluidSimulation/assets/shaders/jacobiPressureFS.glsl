@@ -54,5 +54,5 @@ void main(){
 
     float d = texture(uDivergence,vUV).r;
 
-    outPressure = (pR + pL + pT + pB - d) * 0.25;
+    outPressure = (pR + pL + pT + pB - d * uCellSizeSq) * 0.25;
 }

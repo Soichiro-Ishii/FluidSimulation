@@ -111,6 +111,16 @@ bool FluidSimStage::onInit() {
 		spdlog::critical("faild to load vort omega Shader");
 		return false;
 	}
+	m_jacobiDiffVelShader.load("assets\\shaders\\screenVS.glsl", "assets\\shaders\\diffutionVelFS.glsl");
+	if (!m_jacobiDiffVelShader.valid()) {
+		spdlog::critical("faild to load diffution velocity Shader");
+		return false;
+	}
+	m_jacobiDiffColDensShader.load("assets\\shaders\\screenVS.glsl", "assets\\shaders\\diffutionColDensFS.glsl");
+	if (!m_jacobiDiffColDensShader.valid()) {
+		spdlog::critical("faild to load diffution color and density Shader");
+		return false;
+	}
 
 	TEXTURE2DSETTING firstColorDensSet;
 	firstColorDensSet.filter = TEXTURE2DFILTER::LINEAR;
@@ -130,6 +140,8 @@ bool FluidSimStage::onInit() {
 	TEXTURE2DDESC divergenceDesc;
 	TEXTURE2DDESC pressureDesc;
 	TEXTURE2DDESC vortOmegaDesc;
+	TEXTURE2DDESC diffVelGuessDesc;
+	TEXTURE2DDESC diffColDensGuessDesc;
 	velDesc.width = width();
 	velDesc.height = height();
 	velDesc.internalFormat = GL_RG16F;
@@ -145,6 +157,10 @@ bool FluidSimStage::onInit() {
 	divergenceDesc.set.filter = TEXTURE2DFILTER::NEAREST;
 	pressureDesc = divergenceDesc;		//共通部分はコピー
 	vortOmegaDesc = divergenceDesc;		//共通部分はコピー
+	diffVelGuessDesc = velDesc;
+	diffColDensGuessDesc = colDensDesc;
+	diffVelGuessDesc.set.filter = TEXTURE2DFILTER::NEAREST;
+	diffColDensGuessDesc.set.filter = TEXTURE2DFILTER::NEAREST;
 	for (auto& rt : m_velRT) {
 		rt.create(velDesc);
 		m_notDensRenderTargets.push_back(&rt);
@@ -152,10 +168,17 @@ bool FluidSimStage::onInit() {
 	for (auto& rt : m_colDensRT) {
 		rt.create(colDensDesc);
 	}
+	for (auto& rt : m_diffColDensGuessRT) {
+		rt.create(diffColDensGuessDesc);
+	}
 	m_divergenceRT.create(divergenceDesc);
 	m_notDensRenderTargets.push_back(&m_divergenceRT);
 	for (auto& rt : m_pressureRT) {
 		rt.create(pressureDesc);
+		m_notDensRenderTargets.push_back(&rt);
+	}
+	for (auto& rt : m_diffVelGuessRT) {
+		rt.create(diffVelGuessDesc);
 		m_notDensRenderTargets.push_back(&rt);
 	}
 	m_vortOmegaRT.create(vortOmegaDesc);
@@ -228,11 +251,19 @@ void FluidSimStage::onUpdate(float delta) {
 			ImGui::SliderFloat("interaction Force", &m_MS.interactionForce, 0.0f, 15000.0f);
 			ImGui::SliderFloat("interaction Radius", &m_MS.interactionRadius, 0.0f, 0.2f);
 			ImGui::SliderFloat("vorticity strength", &m_FSC.vortStrength, 0.0f, 50.0f);
-			ImGui::SliderInt("jacobi pressure repetition", reinterpret_cast<int*>(&m_numJacobiReps), 0, 128);
+			ImGui::SliderInt("jacobi pressure repetition", reinterpret_cast<int*>(&m_numJacobiReps), 1, 128);
+			ImGui::SliderInt("jacobi diffution repetition", reinterpret_cast<int*>(&m_numDiffutionJacobiReps), 1, 128);
 			ImGui::SliderFloat("density Decay", &m_FSC.densityDecay, 0.0f, 2.0f);
 			ImGui::SliderFloat("velocity Decay", &m_FSC.velocityDecay, 0.0f, 2.0f);
+			ImGui::SliderFloat("density Diffution", &m_FSC.densityDiffusion, 0.0f, 500.0f);
+			ImGui::SliderFloat("velocity Diffution", &m_FSC.velocityDiffusion, 0.0f, 500.0f);
+			if (ImGui::SliderFloat("cell size", &m_FSC.cellSize, 0.001f, 20.0f)) {
+				m_FSC.cellSizeSq = m_FSC.cellSize * m_FSC.cellSize;
+			}
 		}
 		if (ImGui::CollapsingHeader("color")) {
+
+			ImGui::Checkbox("lock inner and outer color", &m_colInOutLock);
 
 			ImGui::Text("inner color");
 			ImGui::Separator();
@@ -323,17 +354,25 @@ void FluidSimStage::onUpdate(float delta) {
 	if (mPos != std::nullopt)
 		m_MS.mPos = *mPos / glm::vec2(widthf(), heightf()) * m_FSC.resolution;
 	m_MS.mVel = mouseDelta() / delta / glm::vec2(widthf(), heightf()) * m_FSC.resolution;
+	//内側の色
 	if (m_inColCtrMode == COLOR_CONTROL_MODE::RAINBOW) {
 		m_MS.injectColor = hsb2rgb(m_FSC.time * m_colChangeSpeed, m_inSaturation, m_inBrightness, 1.0f) * m_colorStrength;
 	}
 	else if (m_inColCtrMode == COLOR_CONTROL_MODE::OWN) {
 		m_MS.injectColor = innerCol * m_colorStrength;
 	}
-	if (m_outColCtrMode == COLOR_CONTROL_MODE::RAINBOW) {
-		m_MS.injectOutColor = hsb2rgb((m_FSC.time * m_colChangeSpeed) - m_phaseShift, m_outSaturation, m_outBrightness, 1.0f) * m_colorStrength;
+	//外側の色
+	if (m_colInOutLock) {
+		m_MS.injectOutColor = m_MS.injectColor;
+		outerCol = m_MS.injectColor / m_colorStrength;
 	}
-	else if (m_outColCtrMode == COLOR_CONTROL_MODE::OWN) {
-		m_MS.injectOutColor = outerCol * m_colorStrength;
+	else {
+		if (m_outColCtrMode == COLOR_CONTROL_MODE::RAINBOW) {
+			m_MS.injectOutColor = hsb2rgb((m_FSC.time * m_colChangeSpeed) - m_phaseShift, m_outSaturation, m_outBrightness, 1.0f) * m_colorStrength;
+		}
+		else if (m_outColCtrMode == COLOR_CONTROL_MODE::OWN) {
+			m_MS.injectOutColor = outerCol * m_colorStrength;
+		}
 	}
 	m_MS.rClick = static_cast<uint32_t>(isMousePress(GLFW_MOUSE_BUTTON_RIGHT));
 	m_MS.lClick = static_cast<uint32_t>(isMousePress(GLFW_MOUSE_BUTTON_LEFT));
@@ -351,6 +390,14 @@ void FluidSimStage::onRender() {
 		}
 		glViewport(0, 0, m_colDensRT[m_currentColDensRT].width(), m_colDensRT[m_currentColDensRT].height());
 		for (auto& rt : m_colDensRT) {
+			rt.bind();
+			m_initColDensShader.bind();
+			m_firstColDens.bind(0);
+			m_screen.draw();
+			rt.unbind();
+		}
+		glViewport(0, 0, m_diffColDensGuessRT[m_currentColDensRT].width(), m_diffColDensGuessRT[m_currentColDensRT].height());
+		for (auto& rt : m_diffColDensGuessRT) {
 			rt.bind();
 			m_initColDensShader.bind();
 			m_firstColDens.bind(0);
@@ -392,6 +439,26 @@ void FluidSimStage::onRender() {
 	m_vortOmegaRT.color().bind(1);
 	m_screen.draw();
 	m_velRT[m_currentVelRT].unbind();
+	//速度拡散
+	glViewport(0, 0, m_diffVelGuessRT[0].width(), m_diffVelGuessRT[0].height());
+	const GLTexture2D* beforeGuess = &m_velRT[m_currentVelRT].color();
+	const GLTexture2D* originalVel = &m_velRT[m_currentVelRT].color();
+	for (int i = 0; i < m_numDiffutionJacobiReps; i++) {
+		char currentDiffRT = i % 2;
+		//最後ならvelRTに描画
+		if (i == m_numDiffutionJacobiReps - 1) {
+			m_currentVelRT ^= 1;
+			m_velRT[m_currentVelRT].bind();
+		}
+		else {
+			m_diffVelGuessRT[currentDiffRT].bind();
+		}
+		m_jacobiDiffVelShader.bind();
+		originalVel->bind(0);
+		beforeGuess->bind(1);
+		m_screen.draw();
+		beforeGuess = &m_diffVelGuessRT[currentDiffRT].color();
+	}
 	//速度発散
 	m_texcelSMP.bind(0);
 	glViewport(0, 0, m_divergenceRT.width(), m_divergenceRT.height());
@@ -444,6 +511,28 @@ void FluidSimStage::onRender() {
 	m_colDensRT[m_currentColDensRT ^ 1].color().bind(1);
 	m_screen.draw();
 	m_colDensRT[m_currentColDensRT].unbind();
+	//密度拡散
+	glViewport(0, 0, m_diffColDensGuessRT[0].width(), m_diffColDensGuessRT[0].height());
+	beforeGuess = &m_colDensRT[m_currentColDensRT].color();
+	originalVel = &m_colDensRT[m_currentColDensRT].color();
+	for (int i = 0; i < m_numDiffutionJacobiReps; i++) {
+		char currentDiffRT = i % 2;
+		//最後ならvelRTに描画
+		if (i == m_numDiffutionJacobiReps - 1) {
+			m_currentColDensRT ^= 1;
+			m_colDensRT[m_currentColDensRT].bind();
+		}
+		else {
+			m_diffColDensGuessRT[currentDiffRT].bind();
+		}
+		m_jacobiDiffColDensShader.bind();
+		originalVel->bind(0);
+		beforeGuess->bind(1);
+		m_screen.draw();
+		beforeGuess = &m_diffColDensGuessRT[currentDiffRT].color();
+	}
+	m_colDensRT[m_currentColDensRT].unbind();
+
 
 	glViewport(0, 0, width(), height());
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);

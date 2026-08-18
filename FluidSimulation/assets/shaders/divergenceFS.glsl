@@ -51,5 +51,5 @@ void main(){
     float vT = textureOffset(uVel,vUV,ivec2(0,1)).y;
     float vB = textureOffset(uVel,vUV,ivec2(0,-1)).y;
 
-    outDivergence = 0.5 * (uR - uL + vT - vB);
+    outDivergence = (uR - uL + vT - vB) / (2.0 * uCellSize);
 }

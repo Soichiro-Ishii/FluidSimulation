@@ -72,10 +72,10 @@ void main(){
 		else
 			outColDens = colDens - outColDens;
 
-		outColDens *= exp(-densityDecay * uDelta);
 	}
 	else{
 	outColDens = colDens;
 	}
+	outColDens *= exp(-densityDecay * uDelta);
 
 }

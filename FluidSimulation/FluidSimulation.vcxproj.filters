@@ -318,5 +318,11 @@
     <None Include="assets\shaders\vortOmegaFS.glsl">
       <Filter>Assets\Shaders</Filter>
     </None>
+    <None Include="assets\shaders\diffutionColDensFS.glsl">
+      <Filter>Assets\Shaders</Filter>
+    </None>
+    <None Include="assets\shaders\diffutionVelFS.glsl">
+      <Filter>Assets\Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

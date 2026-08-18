@@ -62,6 +62,8 @@ private:
 	GLRenderTarget m_divergenceRT;
 	GLRenderTarget m_pressureRT[2];
 	GLRenderTarget m_vortOmegaRT;
+	GLRenderTarget m_diffVelGuessRT[2];
+	GLRenderTarget m_diffColDensGuessRT[2];
 	std::vector<GLRenderTarget*> m_notDensRenderTargets;
 	GLShader m_advVelShader;
 	GLShader m_advColDensShader;
@@ -73,6 +75,8 @@ private:
 	GLShader m_renderDivShader;
 	GLShader m_initPressureShader;
 	GLShader m_jacobiPressureShader;
+	GLShader m_jacobiDiffVelShader;
+	GLShader m_jacobiDiffColDensShader;
 	GLShader m_projectionShader;
 	GLShader m_applyForceVelShader;
 	GLShader m_applyInputColDensShader;
@@ -87,6 +91,7 @@ private:
 	bool m_shouldReset = true;
 	GLSampler m_texcelSMP;
 	unsigned int m_numJacobiReps = 32;
+	unsigned int m_numDiffutionJacobiReps = 32;
 	char m_currentVelRT = 0;
 	bool m_showGrad = false;
 	bool m_enableImgInit = true;
@@ -99,6 +104,7 @@ private:
 	COLOR_CONTROL_MODE m_inColCtrMode = COLOR_CONTROL_MODE::RAINBOW;
 	COLOR_CONTROL_MODE m_outColCtrMode = COLOR_CONTROL_MODE::RAINBOW;
 	float m_colorStrength = 200.0f;
+	bool m_colInOutLock = false;
 public:
 	FluidSimStage();
 	bool onInit() override;

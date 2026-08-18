@@ -1,7 +1,8 @@
 #version 460 core
 
 layout(location = 0) in vec2 vUV;
-layout(binding = 0) uniform sampler2D uBeforeVel;
+layout(binding = 0) uniform sampler2D uBeforeColDens;
+layout(binding = 1) uniform sampler2D uGuess;
 
 layout(std140, binding = 0) uniform FluidSimConstants
 {
@@ -42,11 +43,17 @@ layout(std140, binding = 1) uniform FluidSimInput
 	uint uLClick;
 };
 
-layout(location = 0) out vec2 outVel;
+layout(location = 0) out vec4 outQ;
 
 void main(){
-    vec2 vel = texture(uBeforeVel,vUV).rg;
-    vec2 oldUV = vUV - vel * uDelta / (uResolution * uCellSize);
-    vec2 newVel = texture(uBeforeVel,oldUV).rg;
-    outVel = newVel;
+	vec4 old = textureOffset(uBeforeColDens,vUV,ivec2(0,0));
+
+	vec4 L = textureOffset(uGuess,vUV,ivec2(-1,0),0);
+	vec4 R = textureOffset(uGuess,vUV,ivec2(1,0),0);
+	vec4 B = textureOffset(uGuess,vUV,ivec2(0,-1),0);
+	vec4 T = textureOffset(uGuess,vUV,ivec2(0,1),0);
+
+	float a = uDensityDiffusion * uDelta / uCellSizeSq;
+
+	outQ = (old + a * (L + R + B + T)) / (1.0 + 4.0 * a);
 }

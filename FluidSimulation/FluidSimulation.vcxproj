@@ -279,6 +279,8 @@
     <None Include="assets\shaders\advectionVelFS.glsl" />
     <None Include="assets\shaders\applyForceVelFS.glsl" />
     <None Include="assets\shaders\applyInputColDensFS.glsl" />
+    <None Include="assets\shaders\diffutionColDensFS.glsl" />
+    <None Include="assets\shaders\diffutionVelFS.glsl" />
     <None Include="assets\shaders\divergenceFS.glsl" />
     <None Include="assets\shaders\initColDensFS.glsl" />
     <None Include="assets\shaders\initPressureFS.glsl" />

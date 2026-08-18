@@ -171,7 +171,7 @@ vec2 sampleVelocityAdaptive(vec2 uv)
 void main(){
      vec2 vel = sampleVelocityAdaptive(vUV);
 
-    vec2 oldUV = vUV - vel * uDelta / uResolution;
+    vec2 oldUV = vUV - vel * uDelta / (uResolution * uCellSize);
 
     outColDens = texture(uBeforeColDens, oldUV);
 }
