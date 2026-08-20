@@ -53,6 +53,15 @@ enum class COLOR_CONTROL_MODE {
 	OWN
 };
 
+enum class FLUID_VIEW_MODE {
+	DENSITY,
+	VELOCITY,
+	PRESSURE,
+	DIVERGENCE,
+	VORT_OMEGA,
+	NUM_VIEW_MODE
+};
+
 class FluidSimStage :
 	public Stage
 {
@@ -64,6 +73,7 @@ private:
 	GLRenderTarget m_vortOmegaRT;
 	GLRenderTarget m_diffVelGuessRT[2];
 	GLRenderTarget m_diffColDensGuessRT[2];
+	GLRenderTarget m_fluidFinalRT;
 	std::vector<GLRenderTarget*> m_notDensRenderTargets;
 	GLShader m_advVelShader;
 	GLShader m_advColDensShader;

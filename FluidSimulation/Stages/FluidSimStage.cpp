@@ -142,6 +142,7 @@ bool FluidSimStage::onInit() {
 	TEXTURE2DDESC vortOmegaDesc;
 	TEXTURE2DDESC diffVelGuessDesc;
 	TEXTURE2DDESC diffColDensGuessDesc;
+	TEXTURE2DDESC fluidFinalDesc;
 	velDesc.width = width();
 	velDesc.height = height();
 	velDesc.internalFormat = GL_RG16F;
@@ -161,6 +162,7 @@ bool FluidSimStage::onInit() {
 	diffColDensGuessDesc = colDensDesc;
 	diffVelGuessDesc.set.filter = TEXTURE2DFILTER::NEAREST;
 	diffColDensGuessDesc.set.filter = TEXTURE2DFILTER::NEAREST;
+	fluidFinalDesc = colDensDesc;
 	for (auto& rt : m_velRT) {
 		rt.create(velDesc);
 		m_notDensRenderTargets.push_back(&rt);
@@ -183,6 +185,7 @@ bool FluidSimStage::onInit() {
 	}
 	m_vortOmegaRT.create(vortOmegaDesc);
 	m_notDensRenderTargets.push_back(&m_vortOmegaRT);
+	m_fluidFinalRT.create(fluidFinalDesc);
 
 	SAMPLER_DESC smpDesc;
 	smpDesc.minFilter = TEXTURE2DFILTER::NEAREST;
@@ -232,6 +235,7 @@ void FluidSimStage::changeRTResolution(int newWidth, int newHeight) {
 	}
 }
 void FluidSimStage::onUpdate(float delta) {
+	m_fluidFinalRT.resize(width(), height());
 	m_FSC.time += delta;
 	m_FSC.delta = delta;
 	static int newWidth = width();
@@ -336,6 +340,9 @@ void FluidSimStage::onUpdate(float delta) {
 				m_FSC.densityResolution.x = newDensWidth;
 				m_FSC.densityResolution.y = newDensHeight;
 				for (auto& rt : m_colDensRT) {
+					rt.resize(newDensWidth, newDensHeight);
+				}
+				for (auto& rt : m_diffColDensGuessRT) {
 					rt.resize(newDensWidth, newDensHeight);
 				}
 				m_shouldReset = true;
@@ -531,21 +538,29 @@ void FluidSimStage::onRender() {
 		m_screen.draw();
 		beforeGuess = &m_diffColDensGuessRT[currentDiffRT].color();
 	}
-	m_colDensRT[m_currentColDensRT].unbind();
-
 
 	glViewport(0, 0, width(), height());
+	if (m_showGrad)
+		m_fluidFinalRT.bind();
+	else
+		m_colDensRT[m_currentColDensRT].unbind();
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
-	if (m_showGrad)
-		m_renderGradTexShader.bind();
-	else
-		m_renderTexShader.bind();
+	m_renderTexShader.bind();
 	//m_velRT[m_currentVelRT].color().bind(0);
 	//m_vortOmegaRT.color().bind(0);
 	m_colDensRT[m_currentColDensRT].color().bind(0);
 	//m_pressureRT[(m_numJacobiReps - 1) % 2].color().bind(0);
 	m_screen.draw();
+
+	if (m_showGrad) {
+		m_fluidFinalRT.unbind();
+		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+		m_renderGradTexShader.bind();
+		m_fluidFinalRT.color().bind(0);
+		m_screen.draw();
+	}
 
 	//glViewport(0, 0, width(), height());
 	//glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
