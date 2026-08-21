@@ -43,12 +43,22 @@ bool FluidSimStage::onInit() {
 
 	m_renderTexShader.load("assets\\shaders\\screenVS.glsl", "assets\\shaders\\renderTexFS.glsl");
 	if (!m_renderTexShader.valid()) {
-		spdlog::critical("faild to load lastShader");
+		spdlog::critical("faild to load render texture Shader");
 		return false;
 	}
 	m_renderGradTexShader.load("assets\\shaders\\screenVS.glsl", "assets\\shaders\\renderGradTexFS.glsl");
 	if (!m_renderGradTexShader.valid()) {
-		spdlog::critical("faild to load lastShader");
+		spdlog::critical("faild to load render gradient texture Shader");
+		return false;
+	}
+	m_renderGradTexBlendShader.load("assets\\shaders\\screenVS.glsl", "assets\\shaders\\renderGradTexBlendFS.glsl");
+	if (!m_renderGradTexBlendShader.valid()) {
+		spdlog::critical("faild to load render gradient texture blend Shader");
+		return false;
+	}
+	m_renderFluidShader.load("assets\\shaders\\screenVS.glsl", "assets\\shaders\\renderFluidFS.glsl");
+	if (!m_renderFluidShader.valid()) {
+		spdlog::critical("faild to load render fluid Shader");
 		return false;
 	}
 	m_initColDensShader.load("assets\\shaders\\screenVS.glsl", "assets\\shaders\\initColDensFS.glsl");
@@ -185,7 +195,7 @@ bool FluidSimStage::onInit() {
 	}
 	m_vortOmegaRT.create(vortOmegaDesc);
 	m_notDensRenderTargets.push_back(&m_vortOmegaRT);
-	m_fluidFinalRT.create(fluidFinalDesc);
+	m_renderFluidRT.create(fluidFinalDesc);
 
 	SAMPLER_DESC smpDesc;
 	smpDesc.minFilter = TEXTURE2DFILTER::NEAREST;
@@ -224,6 +234,13 @@ bool FluidSimStage::onInit() {
 	m_MS.lClick = 0;
 	m_MSUB.create(&m_MS, sizeof(FluidSimInput), 1);
 
+	m_RS.baseStrength = 1.0f;
+	m_RS.gradStrength = 0.0f;
+	m_RS.interactionStrength = 0.0f;
+	m_RS.viewMode = 0;
+	m_RS.viewStrength = 1.0f;
+	m_RSUB.create(&m_RS, sizeof(RenderState), 2);
+
 	m_initColDensShader.setUniformUInt("enableImgInit", static_cast<uint32_t>(m_enableImgInit));
 
 	glDisable(GL_DEPTH_TEST);
@@ -235,7 +252,7 @@ void FluidSimStage::changeRTResolution(int newWidth, int newHeight) {
 	}
 }
 void FluidSimStage::onUpdate(float delta) {
-	m_fluidFinalRT.resize(width(), height());
+	m_renderFluidRT.resize(width(), height());
 	m_FSC.time += delta;
 	m_FSC.delta = delta;
 	static int newWidth = width();
@@ -249,11 +266,18 @@ void FluidSimStage::onUpdate(float delta) {
 		"rainbow control",
 		"own control"
 	};
+	static constexpr const char* viewModeNames[] = {
+		"color and density",
+		"velocity",
+		"pressure",
+		"divergence",
+		"curl"
+	};
 	if (ImGui::Begin("Fluid Simulator")) {
 		ImGui::Text("FPS:%.1f delta:%.1fms", 1 / delta, delta * 1000);
 		if (ImGui::CollapsingHeader("state")) {
 			ImGui::SliderFloat("interaction Force", &m_MS.interactionForce, 0.0f, 15000.0f);
-			ImGui::SliderFloat("interaction Radius", &m_MS.interactionRadius, 0.0f, 0.2f);
+			ImGui::SliderFloat("interaction Radius", &m_MS.interactionRadius, 0.001f, 0.2f);
 			ImGui::SliderFloat("vorticity strength", &m_FSC.vortStrength, 0.0f, 50.0f);
 			ImGui::SliderInt("jacobi pressure repetition", reinterpret_cast<int*>(&m_numJacobiReps), 1, 128);
 			ImGui::SliderInt("jacobi diffution repetition", reinterpret_cast<int*>(&m_numDiffutionJacobiReps), 1, 128);
@@ -312,7 +336,7 @@ void FluidSimStage::onUpdate(float delta) {
 			}
 			ImGui::Separator();
 
-			ImGui::SliderFloat("color strength", &m_colorStrength, 0.0f, 300.0f);
+			ImGui::SliderFloat("color strength", &m_colorStrength, 0.001f, 300.0f);
 			ImGui::SliderFloat("phase shift", &m_phaseShift, 0.0f, 1.0f);
 			ImGui::SliderFloat("color change speed", &m_colChangeSpeed, 0.0f, 3.0f);
 
@@ -321,9 +345,27 @@ void FluidSimStage::onUpdate(float delta) {
 			}
 		}
 		if (ImGui::CollapsingHeader("visual")) {
-			if (ImGui::Button("show gradient")) {
-				m_showGrad = !m_showGrad;
+			ImGui::SliderFloat("base color strength", &m_RS.baseStrength, 0.0f, 2.0f);
+			ImGui::SliderFloat("grad color strength", &m_RS.gradStrength, 0.0f, 2.0f);
+			ImGui::SliderFloat("interaction color strength", &m_RS.interactionStrength, 0.0f, 2.0f);
+
+			if (m_RS.gradStrength <= 1e-6 && m_RS.interactionStrength <= 1e-6)
+				ImGui::Text("debug:enable render texture shader");
+			else if (m_RS.baseStrength <= 1e-6 && m_RS.interactionStrength <= 1e-6)
+				ImGui::Text("debug:enable render gradient texture shader");
+			else
+				ImGui::Text("debug:enable render gradient texture blend shader");
+
+			int currentFluidView = static_cast<int>(m_fluidViewMode);
+			if (ImGui::Combo(
+				"fluid view mode",
+				&currentFluidView,
+				viewModeNames,
+				IM_ARRAYSIZE(viewModeNames)))
+			{
+				m_fluidViewMode = static_cast<FLUID_VIEW_MODE>(currentFluidView);
 			}
+			ImGui::SliderFloat("view strength", &m_RS.viewStrength, 0.001f, 1.0f, "%f", ImGuiSliderFlags_Logarithmic);
 		}
 		if (ImGui::CollapsingHeader("reset")) {
 			ImGui::SliderInt("new width", &newWidth, 0.0f, width() * 1.5f);
@@ -383,8 +425,11 @@ void FluidSimStage::onUpdate(float delta) {
 	}
 	m_MS.rClick = static_cast<uint32_t>(isMousePress(GLFW_MOUSE_BUTTON_RIGHT));
 	m_MS.lClick = static_cast<uint32_t>(isMousePress(GLFW_MOUSE_BUTTON_LEFT));
+
+	m_RS.viewMode = static_cast<uint32_t>(m_fluidViewMode);
 	m_MSUB.update(&m_MS, sizeof(FluidSimInput), 0);
 	m_FSCUB.update(&m_FSC, sizeof(FluidSimConstants), 0);
+	m_RSUB.update(&m_RS, sizeof(RenderState), 0);
 }
 void FluidSimStage::onRender() {
 	if (m_shouldReset) {
@@ -539,28 +584,57 @@ void FluidSimStage::onRender() {
 		beforeGuess = &m_diffColDensGuessRT[currentDiffRT].color();
 	}
 
+
+	//再計算
+	if (m_fluidViewMode == FLUID_VIEW_MODE::DIVERGENCE) {
+		//速度発散
+		m_texcelSMP.bind(0);
+		glViewport(0, 0, m_divergenceRT.width(), m_divergenceRT.height());
+		m_divergenceRT.bind();
+		m_divergenceShader.bind();
+		m_velRT[m_currentVelRT].color().bind(0);
+		m_screen.draw();
+		m_divergenceRT.unbind();
+		m_texcelSMP.unbind(0);
+	}
+	else if (m_fluidViewMode == FLUID_VIEW_MODE::CURL) {
+		//渦度計算
+		m_texcelSMP.bind(0);
+		glViewport(0, 0, m_vortOmegaRT.width(), m_vortOmegaRT.height());
+		m_vortOmegaRT.bind();
+		m_vortOmegaShader.bind();
+		m_velRT[m_currentVelRT].color().bind(0);
+		m_screen.draw();
+		m_vortOmegaRT.unbind();
+		m_texcelSMP.unbind(0);
+	}
+
 	glViewport(0, 0, width(), height());
-	if (m_showGrad)
-		m_fluidFinalRT.bind();
-	else
-		m_colDensRT[m_currentColDensRT].unbind();
-	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
-	m_renderTexShader.bind();
-	//m_velRT[m_currentVelRT].color().bind(0);
-	//m_vortOmegaRT.color().bind(0);
+	m_renderFluidRT.bind();
+	m_renderFluidShader.bind();
 	m_colDensRT[m_currentColDensRT].color().bind(0);
-	//m_pressureRT[(m_numJacobiReps - 1) % 2].color().bind(0);
+	m_velRT[m_currentVelRT].color().bind(1);
+	m_pressureRT[(m_numJacobiReps - 1) % 2].color().bind(2);
+	m_divergenceRT.color().bind(3);
+	m_vortOmegaRT.color().bind(4);
 	m_screen.draw();
 
-	if (m_showGrad) {
-		m_fluidFinalRT.unbind();
-		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
+
+	glViewport(0, 0, width(), height());
+	m_renderFluidRT.unbind();
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
+	if (m_RS.gradStrength <= 1e-6 && m_RS.interactionStrength <= 1e-6)
+		m_renderTexShader.bind();
+	else if (m_RS.baseStrength <= 1e-6 && m_RS.interactionStrength <= 1e-6)
 		m_renderGradTexShader.bind();
-		m_fluidFinalRT.color().bind(0);
-		m_screen.draw();
-	}
+	else
+		m_renderGradTexBlendShader.bind();
+	//m_velRT[m_currentVelRT].color().bind(0);
+	//m_vortOmegaRT.color().bind(0);
+	m_renderFluidRT.color().bind(0);
+	//m_pressureRT[(m_numJacobiReps - 1) % 2].color().bind(0);
+	m_screen.draw();
 
 	//glViewport(0, 0, width(), height());
 	//glClearColor(0.0f, 0.0f, 0.0f, 0.0f);

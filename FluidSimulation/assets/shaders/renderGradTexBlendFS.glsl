@@ -22,5 +22,12 @@ void main(){
 	vec4 gradX = texR - texL;
 	vec4 gradY = texU - texB;
 	vec4 grad = gradX * gradX + gradY * gradY;
-	outColor = vec4(sqrt(grad.r),sqrt(grad.g),sqrt(grad.b),sqrt(grad.a)) * uGradStrength;
+
+	vec4 tex = texture(uTex,vUV);
+	vec4 texGrad = vec4(sqrt(grad.r),sqrt(grad.g),sqrt(grad.b),sqrt(grad.a));
+
+	outColor =
+		tex * uBaseStrength +
+		texGrad * uGradStrength +
+		tex * texGrad * uInteractionStrength;
 }

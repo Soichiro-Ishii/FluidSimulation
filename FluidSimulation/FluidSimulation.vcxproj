@@ -288,6 +288,8 @@
     <None Include="assets\shaders\jacobiPressureFS.glsl" />
     <None Include="assets\shaders\projectionFS.glsl" />
     <None Include="assets\shaders\renderDivergenceFS.glsl" />
+    <None Include="assets\shaders\renderFluidFS.glsl" />
+    <None Include="assets\shaders\renderGradTexBlendFS.glsl" />
     <None Include="assets\shaders\renderGradTexFS.glsl" />
     <None Include="assets\shaders\renderTexFS.glsl" />
     <None Include="assets\shaders\screenVS.glsl" />

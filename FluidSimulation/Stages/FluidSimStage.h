@@ -48,6 +48,14 @@ struct alignas(16) FluidSimInput {
 
 };
 
+struct alignas(16) RenderState {
+	float baseStrength;
+	float gradStrength;
+	float interactionStrength;
+	uint32_t viewMode;
+	float viewStrength;
+};
+
 enum class COLOR_CONTROL_MODE {
 	RAINBOW,
 	OWN
@@ -58,8 +66,7 @@ enum class FLUID_VIEW_MODE {
 	VELOCITY,
 	PRESSURE,
 	DIVERGENCE,
-	VORT_OMEGA,
-	NUM_VIEW_MODE
+	CURL
 };
 
 class FluidSimStage :
@@ -73,12 +80,13 @@ private:
 	GLRenderTarget m_vortOmegaRT;
 	GLRenderTarget m_diffVelGuessRT[2];
 	GLRenderTarget m_diffColDensGuessRT[2];
-	GLRenderTarget m_fluidFinalRT;
+	GLRenderTarget m_renderFluidRT;
 	std::vector<GLRenderTarget*> m_notDensRenderTargets;
 	GLShader m_advVelShader;
 	GLShader m_advColDensShader;
 	GLShader m_renderTexShader;
 	GLShader m_renderGradTexShader;
+	GLShader m_renderGradTexBlendShader;
 	GLShader m_initColDensShader;
 	GLShader m_initVelShader;
 	GLShader m_divergenceShader;
@@ -91,11 +99,14 @@ private:
 	GLShader m_applyForceVelShader;
 	GLShader m_applyInputColDensShader;
 	GLShader m_vortOmegaShader;
+	GLShader m_renderFluidShader;
 	GLMesh m_screen;
 	GLUniformBuffer m_FSCUB;
 	GLUniformBuffer m_MSUB;
+	GLUniformBuffer m_RSUB;
 	FluidSimConstants m_FSC;
 	FluidSimInput m_MS;
+	RenderState m_RS;
 	char m_currentColDensRT = 0;
 	GLTexture2D m_firstColDens;
 	bool m_shouldReset = true;
@@ -103,7 +114,6 @@ private:
 	unsigned int m_numJacobiReps = 32;
 	unsigned int m_numDiffutionJacobiReps = 32;
 	char m_currentVelRT = 0;
-	bool m_showGrad = false;
 	bool m_enableImgInit = true;
 	float m_phaseShift = 0.5f;
 	float m_colChangeSpeed = 1.0f / 5.0f;
@@ -115,6 +125,7 @@ private:
 	COLOR_CONTROL_MODE m_outColCtrMode = COLOR_CONTROL_MODE::RAINBOW;
 	float m_colorStrength = 200.0f;
 	bool m_colInOutLock = false;
+	FLUID_VIEW_MODE m_fluidViewMode = FLUID_VIEW_MODE::DENSITY;
 public:
 	FluidSimStage();
 	bool onInit() override;
