@@ -188,6 +188,8 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Graphics\Bloom.cpp" />
+    <ClCompile Include="Graphics\GaussianBlur.cpp" />
     <ClCompile Include="Graphics\OpenGL\GL2DMesh.cpp" />
     <ClCompile Include="Graphics\OpenGL\GLMultiRenderTarget.cpp" />
     <ClCompile Include="Graphics\OpenGL\GLSampler.cpp" />
@@ -238,6 +240,8 @@
   <ItemGroup>
     <ClInclude Include="Core\Application.h" />
     <ClInclude Include="Core\Stage.h" />
+    <ClInclude Include="Graphics\Bloom.h" />
+    <ClInclude Include="Graphics\GaussianBlur.h" />
     <ClInclude Include="Graphics\OpenGL\GL2DMesh.h" />
     <ClInclude Include="Graphics\OpenGL\GL2DMeshData.h" />
     <ClInclude Include="Graphics\OpenGL\GLMultiRenderTarget.h" />
@@ -279,6 +283,9 @@
     <None Include="assets\shaders\advectionVelFS.glsl" />
     <None Include="assets\shaders\applyForceVelFS.glsl" />
     <None Include="assets\shaders\applyInputColDensFS.glsl" />
+    <None Include="assets\shaders\bloomCompositeFS.glsl" />
+    <None Include="assets\shaders\blurFS.glsl" />
+    <None Include="assets\shaders\brightPassFS.glsl" />
     <None Include="assets\shaders\diffutionColDensFS.glsl" />
     <None Include="assets\shaders\diffutionVelFS.glsl" />
     <None Include="assets\shaders\divergenceFS.glsl" />
@@ -286,6 +293,7 @@
     <None Include="assets\shaders\initPressureFS.glsl" />
     <None Include="assets\shaders\initVelFS.glsl" />
     <None Include="assets\shaders\jacobiPressureFS.glsl" />
+    <None Include="assets\shaders\presentTexFS.glsl" />
     <None Include="assets\shaders\projectionFS.glsl" />
     <None Include="assets\shaders\renderDivergenceFS.glsl" />
     <None Include="assets\shaders\renderFluidFS.glsl" />

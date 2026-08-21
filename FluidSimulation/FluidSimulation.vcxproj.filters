@@ -160,6 +160,12 @@
     <ClCompile Include="Graphics\OpenGL\GLSampler.cpp">
       <Filter>Graphics\OpenGL</Filter>
     </ClCompile>
+    <ClCompile Include="Graphics\Bloom.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\GaussianBlur.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Apps\FluidSimApp.h">
@@ -270,6 +276,12 @@
     <ClInclude Include="Graphics\OpenGL\TextureSmpSettings.h">
       <Filter>Graphics\OpenGL</Filter>
     </ClInclude>
+    <ClInclude Include="Graphics\Bloom.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\GaussianBlur.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\shaders\renderTexFS.glsl">
@@ -328,6 +340,18 @@
       <Filter>Assets\Shaders</Filter>
     </None>
     <None Include="assets\shaders\renderFluidFS.glsl">
+      <Filter>Assets\Shaders</Filter>
+    </None>
+    <None Include="assets\shaders\bloomCompositeFS.glsl">
+      <Filter>Assets\Shaders</Filter>
+    </None>
+    <None Include="assets\shaders\blurFS.glsl">
+      <Filter>Assets\Shaders</Filter>
+    </None>
+    <None Include="assets\shaders\brightPassFS.glsl">
+      <Filter>Assets\Shaders</Filter>
+    </None>
+    <None Include="assets\shaders\presentTexFS.glsl">
       <Filter>Assets\Shaders</Filter>
     </None>
   </ItemGroup>

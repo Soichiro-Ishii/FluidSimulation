@@ -7,6 +7,7 @@
 #include"GLMultiRenderTarget.h"
 #include "GLMesh.h"
 #include"GLSampler.h"
+#include"Bloom.h"
 
 struct alignas(16) FluidSimConstants
 {
@@ -81,10 +82,12 @@ private:
 	GLRenderTarget m_diffVelGuessRT[2];
 	GLRenderTarget m_diffColDensGuessRT[2];
 	GLRenderTarget m_renderFluidRT;
+	GLRenderTarget m_beforeBloomRT;
 	std::vector<GLRenderTarget*> m_notDensRenderTargets;
 	GLShader m_advVelShader;
 	GLShader m_advColDensShader;
 	GLShader m_renderTexShader;
+	GLShader m_presentTexShader;
 	GLShader m_renderGradTexShader;
 	GLShader m_renderGradTexBlendShader;
 	GLShader m_initColDensShader;
@@ -126,6 +129,8 @@ private:
 	float m_colorStrength = 200.0f;
 	bool m_colInOutLock = false;
 	FLUID_VIEW_MODE m_fluidViewMode = FLUID_VIEW_MODE::DENSITY;
+	Bloom m_bloom;
+	bool m_enableBloom = true;
 public:
 	FluidSimStage();
 	bool onInit() override;
