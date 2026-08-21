@@ -1,4 +1,5 @@
-# FluidSimulation
+# FluidSimulation 
+![png](FluidSimulation/icon.png)
 
 OpenGLで動作する、2Dリアルタイム流体シミュレーションです。
 
