@@ -74,7 +74,6 @@ OpenGLで動作する、2Dリアルタイム流体シミュレーションです
 |---|---|
 | Left Mouse Drag | 速度と色を追加 |
 | Right Mouse Drag | 速度を追加 |
-| F1 | FluidSimStageを再生成 |
 
 その他のパラメーターはImGuiの`Fluid Simulator`ウィンドウから変更できます。
 
