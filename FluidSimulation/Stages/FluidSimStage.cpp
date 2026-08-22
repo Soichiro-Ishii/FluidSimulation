@@ -631,18 +631,7 @@ void FluidSimStage::onRender() {
 
 
 	//再計算
-	if (m_fluidViewMode == FLUID_VIEW_MODE::DIVERGENCE) {
-		//速度発散
-		m_texcelSMP.bind(0);
-		glViewport(0, 0, m_divergenceRT.width(), m_divergenceRT.height());
-		m_divergenceRT.bind();
-		m_divergenceShader.bind();
-		m_velRT[m_currentVelRT].color().bind(0);
-		m_screen.draw();
-		m_divergenceRT.unbind();
-		m_texcelSMP.unbind(0);
-	}
-	else if (m_fluidViewMode == FLUID_VIEW_MODE::CURL) {
+	if (m_fluidViewMode == FLUID_VIEW_MODE::CURL) {
 		//渦度計算
 		m_texcelSMP.bind(0);
 		glViewport(0, 0, m_vortOmegaRT.width(), m_vortOmegaRT.height());
@@ -685,19 +674,13 @@ void FluidSimStage::onRender() {
 
 	if (m_enableBloom) {
 		const GLTexture2D& out = m_bloom.execute(m_beforeBloomRT.color(), m_screen);
+		glViewport(0, 0, width(), height());
 		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 		m_presentTexShader.bind();
 		out.bind(0);
 		m_screen.draw();
 	}
-
-	//glViewport(0, 0, width(), height());
-	//glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-	//glClear(GL_COLOR_BUFFER_BIT);
-	//m_renderDivShader.bind();
-	//m_divergenceRT.color().bind(0);
-	//m_screen.draw();
 }
 void FluidSimStage::onShutdown() {}
 
