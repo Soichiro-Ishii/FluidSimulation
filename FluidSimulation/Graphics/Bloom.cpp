@@ -1,8 +1,8 @@
 #include "pch.h"
 #include "Bloom.h"
 
-Bloom::Bloom(int width, int height, float _threshold, float _bloomStrength, int blurStep, float blurScale) {
-	create(width, height, _threshold, _bloomStrength, blurStep, blurScale);
+Bloom::Bloom(int width, int height, float _threshold, float _bloomStrength, int blurStep, float blurScale, uint32_t _blurRadius, float _sigmaExtent) {
+	create(width, height, _threshold, _bloomStrength, blurStep, blurScale, _blurRadius, _sigmaExtent);
 }
 
 Bloom::Bloom(Bloom&& other) noexcept {
@@ -45,7 +45,15 @@ void Bloom::changeBlurStep(int newBlurStep) {
 void Bloom::changeBlurScale(float newBlurScale) {
 	m_blur.changeBlurScale(newBlurScale);
 }
-bool Bloom::create(int width, int height, float _threshold, float _bloomStrength, int blurStep, float blurScale) {
+void Bloom::changeBlurRadius(uint32_t newBlurRadius)
+{
+	m_blur.changeBlurRadius(newBlurRadius);
+}
+void Bloom::changeSigmaExtent(float newSigmaExtent)
+{
+	m_blur.changeSigmaExtent(newSigmaExtent);
+}
+bool Bloom::create(int width, int height, float _threshold, float _bloomStrength, int blurStep, float blurScale, uint32_t _blurRadius, float _sigmaExtent) {
 	m_bloomCompositeShader.load("assets\\shaders\\screenVS.glsl", "assets\\shaders\\bloomCompositeFS.glsl");
 	if (!m_bloomCompositeShader.valid()) {
 		spdlog::critical("faild to load bloom composite shader");
@@ -64,12 +72,15 @@ bool Bloom::create(int width, int height, float _threshold, float _bloomStrength
 		spdlog::critical("faild to create bright pass");
 		return false;
 	}
-	if (!m_blur.create(width, height, blurStep, blurScale)) {
+	if (!m_blur.create(width, height, blurStep, blurScale, _blurRadius, _sigmaExtent)) {
 		spdlog::critical("faild to create blur");
 		return false;
 	}
-	changeThreshold(_threshold);
-	changeBloomStrength(_bloomStrength);
+	m_threshold = _threshold;
+	m_bloomStrength = _bloomStrength;
+
+	m_brightPassShader.setUniformFloat("uThreshold", m_threshold);
+	m_bloomCompositeShader.setUniformFloat("uBloomStrength", m_bloomStrength);
 	return true;
 }
 void Bloom::resize(int width, int height) {

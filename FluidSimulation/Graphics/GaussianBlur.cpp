@@ -1,8 +1,8 @@
 #include "pch.h"
 #include "GaussianBlur.h"
 
-GaussianBlur::GaussianBlur(int width, int height, int _blurStep, float _blurScale) {
-	create(width, height, _blurStep, _blurScale);
+GaussianBlur::GaussianBlur(int width, int height, int _blurStep, float _blurScale, uint32_t _blurRadius, float _sigmaExtent) {
+	create(width, height, _blurStep, _blurScale, _blurRadius, _sigmaExtent);
 }
 
 GaussianBlur::GaussianBlur(GaussianBlur&& other) noexcept {
@@ -25,7 +25,7 @@ GaussianBlur& GaussianBlur::operator=(GaussianBlur&& other) noexcept {
 	return *this;
 }
 
-bool GaussianBlur::create(int width, int height, int _blurStep, float _blurScale) {
+bool GaussianBlur::create(int width, int height, int _blurStep, float _blurScale, uint32_t _blurRadius, float _sigmaExtent) {
 	if (_blurStep <= 0) {
 		spdlog::critical("Gaussian blur init:Num blur repetition is {}. It is invalid!!!", _blurStep);
 		return false;
@@ -46,8 +46,14 @@ bool GaussianBlur::create(int width, int height, int _blurStep, float _blurScale
 	for (int i = 0; i < _blurStep; i++) {
 		m_PPC.add(m_PP[i % 2]);
 	}
-	changeBlurScale(m_blurScale);
 	m_blurStep = _blurStep;
+	m_blurScale = _blurScale;
+	m_blurRadius = std::max(_blurRadius, 1u);
+	m_sigmaExtent = std::max(_sigmaExtent, 0.001f);
+
+	m_shader.setUniformFloat("uBlurScale", m_blurScale);
+	m_shader.setUniformUInt("uRadius", m_blurRadius);
+	m_shader.setUniformFloat("uSigmaExtent", m_sigmaExtent);
 	return true;
 }
 void GaussianBlur::changeBlurStep(int newRep) {
@@ -66,6 +72,21 @@ void GaussianBlur::changeBlurScale(float newBlurScale) {
 	if (m_blurScale != newBlurScale) {
 		m_shader.setUniformFloat("uBlurScale", newBlurScale);
 		m_blurScale = newBlurScale;
+	}
+}
+void GaussianBlur::changeBlurRadius(uint32_t newBlurRadius)
+{
+	if (m_blurRadius != newBlurRadius) {
+		m_shader.setUniformUInt("uRadius", newBlurRadius);
+		m_blurRadius = newBlurRadius;
+	}
+
+}
+void GaussianBlur::changeSigmaExtent(float newSigmaExtent)
+{
+	if (m_sigmaExtent != newSigmaExtent) {
+		m_shader.setUniformFloat("uSigmaExtent", newSigmaExtent);
+		m_sigmaExtent = newSigmaExtent;
 	}
 }
 void GaussianBlur::resize(int width, int height) {

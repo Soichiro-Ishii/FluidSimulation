@@ -402,6 +402,14 @@ void FluidSimStage::onUpdate(float delta) {
 			if (ImGui::SliderFloat("threshold", &currentThreshold, 0.1f, 3.0f)) {
 				m_bloom.changeThreshold(currentThreshold);
 			}
+			int currentBlurRadius = m_bloom.blurRadius();
+			if (ImGui::SliderInt("blur radius", &currentBlurRadius, 1, 16)) {
+				m_bloom.changeBlurRadius(currentBlurRadius);
+			}
+			float currentSigmaExtent = m_bloom.sigmaExtent();
+			if (ImGui::SliderFloat("sigma extent", &currentSigmaExtent, 1.0f, 5.0f)) {
+				m_bloom.changeSigmaExtent(currentSigmaExtent);
+			}
 			ImGui::Checkbox("enable bloom", &m_enableBloom);
 		}
 		if (ImGui::CollapsingHeader("reset")) {
